@@ -25,14 +25,23 @@ let audio: HTMLAudioElement | null = null
 let soundInterval: ReturnType<typeof setInterval> | null = null
 let isPlaying = false
 
+function getAudio() {
+  if (!audio) {
+    audio = new Audio('/sounds/order-sound.mp3')
+    audio.volume = 0.8
+    audio.preload = 'auto'
+  }
+  return audio
+}
+
 export function startAlertSound() {
   if (isPlaying) return
   isPlaying = true
 
   const playOnce = () => {
-    audio = new Audio('/sounds/order-sound.mp3')
-    audio.volume = 0.8
-    audio.play().catch(err => console.warn('Audio play failed:', err))
+    const a = getAudio()
+    a.currentTime = 0
+    a.play().catch(err => console.warn('Audio play failed:', err))
   }
 
   playOnce()
@@ -41,7 +50,7 @@ export function startAlertSound() {
 
 export function stopAlertSound() {
   if (soundInterval) { clearInterval(soundInterval); soundInterval = null }
-  if (audio) { audio.pause(); audio.currentTime = 0; audio = null }
+  if (audio) { audio.pause(); audio.currentTime = 0 }
   isPlaying = false
 }
 
@@ -54,6 +63,8 @@ export function useOrderNotification({ shopId, onNewOrder, enabled = true }: Use
       try {
         const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
         ctx.resume()
+        const a = getAudio()
+        a.load()
         audioUnlockedRef.current = true
       } catch {}
     }
