@@ -1,0 +1,40 @@
+version: "3.9"
+
+services:
+  khao-shop-db:
+    image: postgres:16
+    container_name: khao-shop-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: khaoshop
+      POSTGRES_USER: khaoshop
+      POSTGRES_PASSWORD: khaoshop1234
+    ports:
+      - "5433:5432"
+    volumes:
+      - khao-shop-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U khaoshop -d khaoshop"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  khao-shop-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: khao-shop-app
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://khaoshop:khaoshop1234@khao-shop-db:5432/khaoshop
+      NEXTAUTH_SECRET: "khaoshop-secret-change-me-32chars!!"
+      NEXTAUTH_URL: "http://localhost:3001"
+      NODE_ENV: production
+    ports:
+      - "3001:3000"
+    depends_on:
+      khao-shop-db:
+        condition: service_healthy
+
+volumes:
+  khao-shop-db-data:
