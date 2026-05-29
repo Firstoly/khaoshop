@@ -26,7 +26,7 @@ let alertAudio: HTMLAudioElement | null = null
 export function startAlertSound() {
   if (alertAudio) return
 
-  alertAudio = new Audio('/universfield-level-up-07-383747.mp3')
+  alertAudio = new Audio('/sounds/.order-sound.mp3')
   alertAudio.loop = true
   
   alertAudio.play().catch((err) => {
