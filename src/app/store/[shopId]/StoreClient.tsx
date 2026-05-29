@@ -175,7 +175,8 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
         </div>
       </div>
 
-      <div className="max-w-lg mx-auto px-4 -mt-8 pb-32">
+      {/* เพิ่ม relative z-10 ตรงนี้เพื่อให้ส่วนเมนูลอยเหนือบ็อกซ์ Header สีส้ม */}
+      <div className="relative z-10 max-w-lg mx-auto px-4 -mt-8 pb-32">
         {/* Category tabs */}
         {categories.length > 1 && (
           <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
