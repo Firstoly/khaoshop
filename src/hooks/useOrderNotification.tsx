@@ -21,45 +21,25 @@ interface UseOrderNotificationOptions {
   enabled?: boolean
 }
 
-let soundInterval: ReturnType<typeof setInterval> | null = null
-let isPlaying = false
-
-function playTones() {
-  try {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
-    const playTone = (freq: number, startTime: number, duration: number, vol = 0.3) => {
-      const osc = ctx.createOscillator()
-      const gain = ctx.createGain()
-      osc.connect(gain)
-      gain.connect(ctx.destination)
-      osc.frequency.value = freq
-      osc.type = 'sine'
-      gain.gain.setValueAtTime(0, startTime)
-      gain.gain.linearRampToValueAtTime(vol, startTime + 0.01)
-      gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration)
-      osc.start(startTime)
-      osc.stop(startTime + duration)
-    }
-    const now = ctx.currentTime
-    playTone(880,  now,       0.3, 0.4)
-    playTone(1100, now + 0.2, 0.3, 0.4)
-    playTone(880,  now + 0.4, 0.5, 0.35)
-    playTone(1320, now + 0.6, 0.6, 0.3)
-  } catch (err) {
-    console.warn('Audio not supported:', err)
-  }
-}
+let alertAudio: HTMLAudioElement | null = null
 
 export function startAlertSound() {
-  if (isPlaying) return
-  isPlaying = true
-  playTones()
-  soundInterval = setInterval(() => { playTones() }, 3000)
+  if (alertAudio) return
+
+  alertAudio = new Audio('/universfield-level-up-07-383747.mp3')
+  alertAudio.loop = true
+  
+  alertAudio.play().catch((err) => {
+    console.warn('Audio not supported or blocked:', err)
+  })
 }
 
 export function stopAlertSound() {
-  if (soundInterval) { clearInterval(soundInterval); soundInterval = null }
-  isPlaying = false
+  if (alertAudio) {
+    alertAudio.pause()
+    alertAudio.currentTime = 0
+    alertAudio = null
+  }
 }
 
 export function useOrderNotification({ shopId, onNewOrder, enabled = true }: UseOrderNotificationOptions) {
