@@ -21,16 +21,17 @@ interface UseOrderNotificationOptions {
   enabled?: boolean
 }
 
+// 1. เปลี่ยนจากตัวแปรเก็บ Interval มาเป็นเก็บตัวเล่น Audio แทน
 let alertAudio: HTMLAudioElement | null = null
 
 export function startAlertSound() {
-  if (alertAudio) return
-
-  alertAudio = new Audio('/sounds/.order-sound.mp3')
-  alertAudio.loop = true
+  if (!alertAudio) {
+    alertAudio = new Audio('/sounds/universfield-level-up-07-383747.mp3')
+    alertAudio.loop = true
+  }
   
   alertAudio.play().catch((err) => {
-    console.warn('Audio not supported or blocked:', err)
+    console.warn('Audio play blocked:', err)
   })
 }
 
@@ -38,7 +39,6 @@ export function stopAlertSound() {
   if (alertAudio) {
     alertAudio.pause()
     alertAudio.currentTime = 0
-    alertAudio = null
   }
 }
 
@@ -46,12 +46,21 @@ export function useOrderNotification({ shopId, onNewOrder, enabled = true }: Use
   const channelRef = useRef<any>(null)
   const audioUnlockedRef = useRef(false)
 
+  // 2. แก้ไขฟังก์ชันปลดล็อกเสียง ให้ทำงานกับไฟล์ MP3 แทน AudioContext เดิม
   const unlockAudio = useCallback(() => {
     if (!audioUnlockedRef.current) {
       try {
-        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
-        ctx.resume()
-        audioUnlockedRef.current = true
+        if (!alertAudio) {
+          alertAudio = new Audio('/sounds/order-sound.mp3')
+          alertAudio.loop = true
+        }
+        
+        // แอบสั่งเล่นแล้วหยุดทันที เพื่อให้เบราว์เซอร์รับรู้ว่าผู้ใช้อนุญาตให้มีเสียงแล้ว
+        alertAudio.play().then(() => {
+          alertAudio?.pause()
+          if (alertAudio) alertAudio.currentTime = 0
+          audioUnlockedRef.current = true
+        }).catch(() => {})
       } catch {}
     }
   }, [])
