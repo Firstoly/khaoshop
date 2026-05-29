@@ -21,11 +21,12 @@ interface UseOrderNotificationOptions {
   enabled?: boolean
 }
 
-// Generate notification sound using Web Audio API
-function playNotificationSound() {
+let soundInterval: ReturnType<typeof setInterval> | null = null
+let isPlaying = false
+
+function playTones() {
   try {
     const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
-
     const playTone = (freq: number, startTime: number, duration: number, vol = 0.3) => {
       const osc = ctx.createOscillator()
       const gain = ctx.createGain()
@@ -39,23 +40,32 @@ function playNotificationSound() {
       osc.start(startTime)
       osc.stop(startTime + duration)
     }
-
     const now = ctx.currentTime
-    // ding-dong sound: 3 tones
-    playTone(880, now, 0.3, 0.4)
+    playTone(880,  now,       0.3, 0.4)
     playTone(1100, now + 0.2, 0.3, 0.4)
-    playTone(880, now + 0.4, 0.5, 0.35)
+    playTone(880,  now + 0.4, 0.5, 0.35)
     playTone(1320, now + 0.6, 0.6, 0.3)
   } catch (err) {
     console.warn('Audio not supported:', err)
   }
 }
 
+export function startAlertSound() {
+  if (isPlaying) return
+  isPlaying = true
+  playTones()
+  soundInterval = setInterval(() => { playTones() }, 3000)
+}
+
+export function stopAlertSound() {
+  if (soundInterval) { clearInterval(soundInterval); soundInterval = null }
+  isPlaying = false
+}
+
 export function useOrderNotification({ shopId, onNewOrder, enabled = true }: UseOrderNotificationOptions) {
   const channelRef = useRef<any>(null)
   const audioUnlockedRef = useRef(false)
 
-  // Unlock audio context on first user interaction
   const unlockAudio = useCallback(() => {
     if (!audioUnlockedRef.current) {
       try {
@@ -77,21 +87,17 @@ export function useOrderNotification({ shopId, onNewOrder, enabled = true }: Use
 
   useEffect(() => {
     if (!enabled || !shopId) return
-
     const pusher = getPusherClient()
     const channel = pusher.subscribe(getShopChannel(shopId))
     channelRef.current = channel
 
     channel.bind(PUSHER_EVENTS.NEW_ORDER, (data: NewOrderPayload) => {
-      // Play sound
-      playNotificationSound()
+      startAlertSound()
 
-      // Show toast notification
       toast.custom(
         (t) => (
           <div
-            className={`${t.visible ? 'animate-bounce-in' : 'opacity-0'} 
-              bg-white border-2 border-brand-400 rounded-2xl shadow-xl p-4 max-w-sm w-full`}
+            className={`${t.visible ? 'animate-bounce-in' : 'opacity-0'} bg-white border-2 border-brand-400 rounded-2xl shadow-xl p-4 max-w-sm w-full`}
             style={{ fontFamily: 'var(--font-sarabun)' }}
           >
             <div className="flex items-start gap-3">
@@ -110,34 +116,33 @@ export function useOrderNotification({ shopId, onNewOrder, enabled = true }: Use
                   {data.items.map(i => `${i.name} ×${i.quantity}`).join(', ')}
                 </p>
                 <div className="flex items-center justify-between mt-2">
-                  <span className="text-brand-500 font-bold text-sm">
-                    ฿{data.totalAmount.toLocaleString()}
-                  </span>
+                  <span className="text-brand-500 font-bold text-sm">฿{data.totalAmount.toLocaleString()}</span>
                   <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
-                    data.paymentMethod === 'PROMPTPAY'
-                      ? 'bg-emerald-100 text-emerald-700'
-                      : 'bg-amber-100 text-amber-700'
+                    data.paymentMethod === 'PROMPTPAY' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
                   }`}>
                     {data.paymentMethod === 'PROMPTPAY' ? '💳 QR' : '💵 เงินสด'}
                   </span>
                 </div>
+                <button
+                  onClick={() => { stopAlertSound(); toast.dismiss(t.id) }}
+                  className="mt-2 w-full py-1.5 bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold rounded-lg transition-colors"
+                >
+                  ✓ รับทราบ — หยุดเสียง
+                </button>
               </div>
             </div>
           </div>
         ),
-        {
-          duration: 8000,
-          position: 'top-right',
-        }
+        { duration: Infinity, position: 'top-right' }
       )
 
-      // Callback
       if (onNewOrder) onNewOrder(data)
     })
 
     return () => {
       channel.unbind_all()
       pusher.unsubscribe(getShopChannel(shopId))
+      stopAlertSound()
     }
   }, [shopId, enabled, onNewOrder])
 }

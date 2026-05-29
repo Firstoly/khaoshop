@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { Bell, X, ShoppingBag, Volume2, VolumeX } from 'lucide-react'
-import { useOrderNotification } from '@/hooks/useOrderNotification'
+import { useOrderNotification, stopAlertSound } from '@/hooks/useOrderNotification'
 import { formatPrice } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 
@@ -75,7 +75,7 @@ export function NotificationBell({ shopId }: { shopId: string }) {
     <div className="relative">
       {/* Bell button */}
       <button
-        onClick={() => { setOpen(!open); if (!open) markAllRead() }}
+        onClick={() => { setOpen(!open); if (!open) { markAllRead(); stopAlertSound() } }}
         className={cn(
           'relative w-9 h-9 rounded-xl flex items-center justify-center transition-all',
           pulse ? 'bg-brand-500 text-white scale-110' : 'bg-gray-50 hover:bg-orange-50 text-gray-500 hover:text-brand-500'
