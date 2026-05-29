@@ -38,10 +38,11 @@ git push -u origin main
 1. ไปที่ https://cloudinary.com → Sign up ฟรี
 2. หลัง login ไปที่ **Dashboard**
 3. Copy ข้อมูล 3 อย่าง:
-   - **Cloud Name**
-   - **API Key**
-   - **API Secret**
+   - **Cloud Name**de1tbzwnw
+   - **API Key**524942331727186
+   - **API Secret**kwOIsflwz2Ddj4fhYIZqKGjpdm8
 4. เก็บไว้ใช้ใน STEP 4
+postgresql://neondb_owner:npg_Ct1FprOBWvn3@ep-sweet-term-aowljexh-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
 
 ---
 
