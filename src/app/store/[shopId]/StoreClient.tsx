@@ -231,7 +231,7 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
 
       {/* Cart button */}
       {cartCount > 0 && !showCart && !showForm && !showPayment && (
-        <div className="fixed bottom-6 left-0 right-0 px-4 max-w-lg mx-auto">
+        <div className="fixed bottom-6 left-0 right-0 px-4 max-w-lg mx-auto z-50">
           <button onClick={() => setShowCart(true)}
             className="w-full bg-gradient-to-r from-brand-500 to-brand-600 text-white py-4 rounded-2xl shadow-brand flex items-center justify-between px-5 font-semibold">
             <div className="flex items-center gap-2">
@@ -243,7 +243,7 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
           </button>
         </div>
       )}
-
+      
       {/* Cart modal */}
       {showCart && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm">
