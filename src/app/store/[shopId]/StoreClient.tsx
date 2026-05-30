@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useRef } from 'react'
-import { ShoppingCart, Plus, Minus, X, Phone, MapPin, UtensilsCrossed, ChefHat, CheckCircle, Loader2, Banknote, QrCode, Upload, Image as ImageIcon } from 'lucide-react'
+import { ShoppingCart, Plus, Minus, X, Phone, UtensilsCrossed, ChefHat, CheckCircle, Loader2, Banknote, QrCode, Upload, Image as ImageIcon } from 'lucide-react'
 import { formatPrice, getStockStatus } from '@/lib/utils'
 import toast from 'react-hot-toast'
 import { cn } from '@/lib/utils'
@@ -14,14 +14,13 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
   const [catFilter, setCatFilter] = useState('ทั้งหมด')
   const [showCart, setShowCart] = useState(false)
   const [showForm, setShowForm] = useState(false)
-  const [showPayment, setShowPayment] = useState(false)
   const [orderDone, setOrderDone] = useState<any>(null)
   const [loading, setLoading] = useState(false)
-  const [createdOrder, setCreatedOrder] = useState<any>(null)
   const [form, setForm] = useState({ name:'', phone:'', address:'', note:'', paymentMethod:'CASH' })
+
+  // Slip state (เลือกก่อนสั่ง)
   const [slipFile, setSlipFile] = useState<File|null>(null)
   const [slipPreview, setSlipPreview] = useState('')
-  const [uploadingSlip, setUploadingSlip] = useState(false)
   const slipRef = useRef<HTMLInputElement>(null)
 
   const categories = useMemo(() => {
@@ -32,6 +31,9 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
   const filtered = catFilter === 'ทั้งหมด' ? menuItems : menuItems.filter(m => (m.category ?? 'อื่นๆ') === catFilter)
   const cartTotal = cart.reduce((s,c) => s + c.menuItem.price * c.quantity, 0)
   const cartCount = cart.reduce((s,c) => s + c.quantity, 0)
+
+  // ถ้าเลือก QR ต้องมีสลิปก่อนกดสั่งได้
+  const canSubmit = form.paymentMethod === 'CASH' || (form.paymentMethod === 'PROMPTPAY' && slipFile !== null)
 
   function addToCart(item: any) {
     const stock = getStockStatus(item.dailyLimit, item.soldCount)
@@ -53,11 +55,36 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
     })
   }
 
+  function handleSlipChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 10 * 1024 * 1024) { toast.error('ไฟล์ใหญ่เกิน 10MB'); return }
+    setSlipFile(file)
+    setSlipPreview(URL.createObjectURL(file))
+  }
+
+  function clearSlip() {
+    setSlipFile(null)
+    setSlipPreview('')
+    if (slipRef.current) slipRef.current.value = ''
+  }
+
+  // เมื่อเปลี่ยน payment method ให้ล้าง slip
+  function handlePaymentMethodChange(method: string) {
+    setForm({...form, paymentMethod: method})
+    if (method === 'CASH') clearSlip()
+  }
+
   async function handleOrder(e: React.FormEvent) {
     e.preventDefault()
     if (!cart.length) { toast.error('เพิ่มอาหารก่อนนะคะ'); return }
+    if (form.paymentMethod === 'PROMPTPAY' && !slipFile) {
+      toast.error('กรุณาแนบสลิปการโอนก่อนครับ')
+      return
+    }
     setLoading(true)
     try {
+      // 1. สร้างออเดอร์ก่อน
       const res = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -73,43 +100,23 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
       })
       if (!res.ok) { const e = await res.json(); throw new Error(e.error) }
       const order = await res.json()
-      setCreatedOrder(order)
+
+      // 2. ถ้าเลือก QR → อัปโหลดสลิปพร้อมกันเลย
+      if (form.paymentMethod === 'PROMPTPAY' && slipFile) {
+        const formData = new FormData()
+        formData.append('file', slipFile)
+        const slipRes = await fetch(`/api/orders/${order.id}/slip`, { method: 'POST', body: formData })
+        if (!slipRes.ok) throw new Error('อัปโหลดสลิปไม่สำเร็จ')
+      }
+
       setCart([])
       setShowForm(false)
-      if (form.paymentMethod === 'PROMPTPAY') {
-        setShowPayment(true)
-      } else {
-        setOrderDone(order)
-      }
+      clearSlip()
+      setOrderDone(order)
     } catch (err: any) {
       toast.error(err.message ?? 'เกิดข้อผิดพลาด')
     } finally {
       setLoading(false)
-    }
-  }
-
-  function handleSlipChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setSlipFile(file)
-    setSlipPreview(URL.createObjectURL(file))
-  }
-
-  async function handleUploadSlip() {
-    if (!slipFile || !createdOrder) return
-    setUploadingSlip(true)
-    try {
-      const formData = new FormData()
-      formData.append('file', slipFile)
-      const res = await fetch(`/api/orders/${createdOrder.id}/slip`, { method: 'POST', body: formData })
-      if (!res.ok) throw new Error('อัปโหลดไม่สำเร็จ')
-      toast.success('ส่งสลิปแล้ว! รอร้านยืนยันครับ')
-      setShowPayment(false)
-      setOrderDone(createdOrder)
-    } catch (err: any) {
-      toast.error(err.message)
-    } finally {
-      setUploadingSlip(false)
     }
   }
 
@@ -137,7 +144,7 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
               ) : (
                 <div className="flex items-center justify-center gap-2 text-emerald-600 bg-emerald-50 px-4 py-2 rounded-xl">
                   <QrCode className="w-4 h-4" />
-                  <span className="text-sm font-semibold">รอร้านยืนยันการชำระเงิน</span>
+                  <span className="text-sm font-semibold">ส่งสลิปแล้ว รอร้านยืนยัน</span>
                 </div>
               )}
             </div>
@@ -160,7 +167,8 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
         <div className="relative max-w-lg mx-auto">
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
-              {shop.logoUrl ? <img src={shop.logoUrl} alt={shop.name} className="w-14 h-14 rounded-xl object-cover" />
+              {shop.logoUrl
+                ? <img src={shop.logoUrl} alt={shop.name} className="w-14 h-14 rounded-xl object-cover" />
                 : <ChefHat className="w-8 h-8 text-white" />}
             </div>
             <div>
@@ -198,9 +206,14 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
             return (
               <div key={item.id} className={cn('bg-white rounded-2xl shadow-card overflow-hidden flex', soldOut && 'opacity-60')}>
                 <div className="w-28 h-28 shrink-0 bg-orange-50 relative">
-                  {item.imageUrl ? <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+                  {item.imageUrl
+                    ? <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
                     : <div className="w-full h-full flex items-center justify-center"><UtensilsCrossed className="w-8 h-8 text-gray-200" /></div>}
-                  {soldOut && <div className="absolute inset-0 bg-black/50 flex items-center justify-center"><span className="text-white text-xs font-bold">หมดแล้ว</span></div>}
+                  {soldOut && (
+                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                      <span className="text-white text-xs font-bold">หมดแล้ว</span>
+                    </div>
+                  )}
                 </div>
                 <div className="flex-1 p-3 flex flex-col justify-between">
                   <div>
@@ -214,10 +227,12 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
                     <span className="font-bold text-brand-500">{formatPrice(item.price)}</span>
                     {!soldOut && (
                       <div className="flex items-center gap-2">
-                        {inCart > 0 && <>
-                          <button onClick={() => removeFromCart(item.id)} className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center"><Minus className="w-3 h-3" /></button>
-                          <span className="text-sm font-bold text-brand-500 w-4 text-center">{inCart}</span>
-                        </>}
+                        {inCart > 0 && (
+                          <>
+                            <button onClick={() => removeFromCart(item.id)} className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center"><Minus className="w-3 h-3" /></button>
+                            <span className="text-sm font-bold text-brand-500 w-4 text-center">{inCart}</span>
+                          </>
+                        )}
                         <button onClick={() => addToCart(item)} className="w-7 h-7 rounded-full bg-brand-500 hover:bg-brand-600 flex items-center justify-center text-white shadow-brand"><Plus className="w-3 h-3" /></button>
                       </div>
                     )}
@@ -230,8 +245,8 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
       </div>
 
       {/* Cart button */}
-      {cartCount > 0 && !showCart && !showForm && !showPayment && (
-        <div className="fixed bottom-6 left-0 right-0 px-4 max-w-lg mx-auto z-50">
+      {cartCount > 0 && !showCart && !showForm && (
+        <div className="fixed bottom-6 left-0 right-0 px-4 max-w-lg mx-auto">
           <button onClick={() => setShowCart(true)}
             className="w-full bg-gradient-to-r from-brand-500 to-brand-600 text-white py-4 rounded-2xl shadow-brand flex items-center justify-between px-5 font-semibold">
             <div className="flex items-center gap-2">
@@ -243,7 +258,7 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
           </button>
         </div>
       )}
-      
+
       {/* Cart modal */}
       {showCart && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm">
@@ -271,7 +286,9 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
                 <span className="font-bold">รวม</span>
                 <span className="font-bold text-brand-500 text-lg">{formatPrice(cartTotal)}</span>
               </div>
-              <button onClick={() => { setShowCart(false); setShowForm(true) }} className="btn-primary w-full mt-2">ดำเนินการสั่งซื้อ</button>
+              <button onClick={() => { setShowCart(false); setShowForm(true) }} className="btn-primary w-full mt-2">
+                ดำเนินการสั่งซื้อ
+              </button>
             </div>
           </div>
         </div>
@@ -286,6 +303,7 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
               <button onClick={() => setShowForm(false)} className="w-8 h-8 bg-gray-100 rounded-xl flex items-center justify-center"><X className="w-4 h-4" /></button>
             </div>
             <form onSubmit={handleOrder} className="p-5 space-y-4">
+              {/* Customer info */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">ชื่อ *</label>
                 <input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="input-base" placeholder="ชื่อ-นามสกุล" required />
@@ -307,7 +325,7 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">วิธีชำระเงิน *</label>
                 <div className="grid grid-cols-2 gap-3">
-                  <button type="button" onClick={() => setForm({...form, paymentMethod:'CASH'})}
+                  <button type="button" onClick={() => handlePaymentMethodChange('CASH')}
                     className={cn('flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all',
                       form.paymentMethod === 'CASH' ? 'border-brand-500 bg-orange-50' : 'border-gray-200 hover:border-gray-300')}>
                     <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center', form.paymentMethod === 'CASH' ? 'bg-brand-500' : 'bg-gray-100')}>
@@ -320,7 +338,7 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
                   <button type="button"
                     onClick={() => {
                       if (!shop.promptpayId) { toast.error('ร้านนี้ยังไม่เปิดรับ QR'); return }
-                      setForm({...form, paymentMethod:'PROMPTPAY'})
+                      handlePaymentMethodChange('PROMPTPAY')
                     }}
                     className={cn('flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all',
                       form.paymentMethod === 'PROMPTPAY' ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-gray-300',
@@ -333,6 +351,71 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
                   </button>
                 </div>
               </div>
+
+              {/* QR + Slip section — แสดงเมื่อเลือก PROMPTPAY */}
+              {form.paymentMethod === 'PROMPTPAY' && (
+                <div className="bg-emerald-50 rounded-2xl p-4 space-y-4 border border-emerald-100">
+                  {/* ยอดเงิน */}
+                  <div className="text-center">
+                    <p className="text-xs text-gray-500 mb-1">ยอดที่ต้องโอน</p>
+                    <p className="font-display text-3xl font-black text-emerald-600">{formatPrice(cartTotal)}</p>
+                  </div>
+
+                  {/* QR Code */}
+                  {shop.qrCodeUrl ? (
+                    <div className="text-center space-y-2">
+                      <p className="text-xs font-semibold text-gray-600">สแกน QR เพื่อโอนเงิน</p>
+                      <div className="inline-block p-2 bg-white border border-gray-200 rounded-xl">
+                        <img src={shop.qrCodeUrl} alt="QR" className="w-44 h-44 object-contain" />
+                      </div>
+                      <p className="text-xs text-gray-500">{shop.promptpayName} · {shop.promptpayId}</p>
+                    </div>
+                  ) : (
+                    <div className="text-center bg-white rounded-xl p-4 space-y-1">
+                      <QrCode className="w-10 h-10 text-emerald-400 mx-auto" />
+                      <p className="font-bold text-gray-800">{shop.promptpayId}</p>
+                      <p className="text-xs text-gray-500">{shop.promptpayName}</p>
+                    </div>
+                  )}
+
+                  {/* Upload slip — บังคับแนบก่อนสั่ง */}
+                  <div className="space-y-2">
+                    <p className="text-sm font-semibold text-gray-700 flex items-center gap-1">
+                      📎 แนบสลิปการโอน
+                      <span className="text-red-500 text-xs">* จำเป็น</span>
+                    </p>
+                    <input ref={slipRef} type="file" accept="image/*" className="hidden" onChange={handleSlipChange} />
+
+                    {slipPreview ? (
+                      <div className="relative rounded-xl overflow-hidden border-2 border-emerald-300">
+                        <img src={slipPreview} alt="slip" className="w-full max-h-52 object-contain bg-white" />
+                        <button
+                          type="button"
+                          onClick={clearSlip}
+                          className="absolute top-2 right-2 w-7 h-7 bg-black/60 text-white rounded-full flex items-center justify-center"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                        <div className="absolute bottom-2 left-2 bg-emerald-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                          ✓ แนบสลิปแล้ว
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => slipRef.current?.click()}
+                        className="w-full border-2 border-dashed border-emerald-300 hover:border-emerald-400 bg-white rounded-xl p-5 flex flex-col items-center gap-2 transition-colors"
+                      >
+                        <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
+                          <ImageIcon className="w-5 h-5 text-emerald-500" />
+                        </div>
+                        <p className="text-sm font-medium text-gray-600">กดเพื่อแนบสลิป</p>
+                        <p className="text-xs text-gray-400">JPG, PNG สูงสุด 10MB</p>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Order summary */}
               <div className="bg-orange-50 rounded-2xl p-4">
@@ -349,90 +432,26 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
                 </div>
               </div>
 
-              <button type="submit" disabled={loading} className="btn-primary w-full flex items-center justify-center gap-2">
+              {/* Submit button */}
+              <button
+                type="submit"
+                disabled={loading || !canSubmit}
+                className={cn(
+                  'w-full py-4 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all',
+                  canSubmit
+                    ? 'bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 shadow-brand'
+                    : 'bg-gray-300 cursor-not-allowed'
+                )}
+              >
                 {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-                {form.paymentMethod === 'PROMPTPAY' ? 'ถัดไป → สแกน QR' : 'ยืนยันการสั่งซื้อ'}
+                {loading
+                  ? 'กำลังสั่งซื้อ...'
+                  : form.paymentMethod === 'PROMPTPAY' && !slipFile
+                    ? '⚠️ กรุณาแนบสลิปก่อน'
+                    : 'ยืนยันการสั่งซื้อ'
+                }
               </button>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* PromptPay payment modal */}
-      {showPayment && createdOrder && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-t-3xl w-full max-w-lg max-h-[92vh] overflow-y-auto animate-slide-in">
-            <div className="flex items-center justify-between p-5 border-b border-gray-100">
-              <h2 className="font-display text-lg font-bold">สแกนชำระเงิน</h2>
-              <button onClick={() => { setShowPayment(false); setOrderDone(createdOrder) }} className="w-8 h-8 bg-gray-100 rounded-xl flex items-center justify-center"><X className="w-4 h-4" /></button>
-            </div>
-            <div className="p-5 space-y-5">
-              {/* Amount */}
-              <div className="text-center bg-emerald-50 rounded-2xl p-4">
-                <p className="text-sm text-gray-500">ยอดที่ต้องชำระ</p>
-                <p className="font-display text-4xl font-black text-emerald-600">{formatPrice(createdOrder.totalAmount)}</p>
-              </div>
-
-              {/* QR Code */}
-              <div className="text-center">
-                {shop.qrCodeUrl ? (
-                  <div className="space-y-2">
-                    <p className="text-sm font-semibold text-gray-700">สแกน QR Code ชำระเงิน</p>
-                    <div className="inline-block p-3 bg-white border-2 border-gray-200 rounded-2xl">
-                      <img src={shop.qrCodeUrl} alt="QR Code" className="w-52 h-52 object-contain" />
-                    </div>
-                    <p className="text-xs text-gray-400">{shop.promptpayName}</p>
-                    <p className="text-sm font-bold text-gray-700">{shop.promptpayId}</p>
-                  </div>
-                ) : (
-                  <div className="bg-gray-50 rounded-2xl p-6 space-y-2">
-                    <QrCode className="w-16 h-16 text-gray-300 mx-auto" />
-                    <p className="font-bold text-gray-700">PromptPay</p>
-                    <p className="text-xl font-black text-gray-900">{shop.promptpayId}</p>
-                    <p className="text-sm text-gray-500">{shop.promptpayName}</p>
-                    <p className="text-xs text-gray-400">โอนพร้อมเพย์ไปที่เบอร์นี้</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Upload slip */}
-              <div className="space-y-3">
-                <p className="text-sm font-semibold text-gray-700">📎 แนบสลิปการโอน</p>
-                <input ref={slipRef} type="file" accept="image/*" className="hidden" onChange={handleSlipChange} />
-
-                {slipPreview ? (
-                  <div className="relative rounded-2xl overflow-hidden border-2 border-emerald-200">
-                    <img src={slipPreview} alt="slip" className="w-full max-h-64 object-contain bg-gray-50" />
-                    <button onClick={() => { setSlipFile(null); setSlipPreview('') }}
-                      className="absolute top-2 right-2 w-7 h-7 bg-black/60 text-white rounded-full flex items-center justify-center">
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ) : (
-                  <button type="button" onClick={() => slipRef.current?.click()}
-                    className="w-full border-2 border-dashed border-gray-200 hover:border-emerald-300 rounded-2xl p-6 flex flex-col items-center gap-2 transition-colors">
-                    <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center">
-                      <ImageIcon className="w-6 h-6 text-emerald-400" />
-                    </div>
-                    <p className="text-sm font-medium text-gray-600">คลิกเพื่อแนบสลิป</p>
-                    <p className="text-xs text-gray-400">JPG, PNG ขนาดสูงสุด 10MB</p>
-                  </button>
-                )}
-
-                {slipFile && (
-                  <button onClick={handleUploadSlip} disabled={uploadingSlip}
-                    className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-60 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-colors">
-                    {uploadingSlip ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                    {uploadingSlip ? 'กำลังส่ง...' : 'ส่งสลิป'}
-                  </button>
-                )}
-
-                <button onClick={() => { setShowPayment(false); setOrderDone(createdOrder) }}
-                  className="w-full py-3 text-gray-500 hover:text-gray-700 text-sm font-medium transition-colors">
-                  ส่งสลิปทีหลัง / ข้ามขั้นตอนนี้
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       )}
