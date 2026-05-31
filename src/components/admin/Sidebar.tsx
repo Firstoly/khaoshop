@@ -3,15 +3,16 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, UtensilsCrossed, ClipboardList, Settings, ChefHat, ExternalLink, Menu, X, BarChart2 } from 'lucide-react'
+import { LayoutDashboard, UtensilsCrossed, ClipboardList, Settings, ChefHat, ExternalLink, Menu, X, BarChart2, AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
-  { href: '/dashboard',            icon: LayoutDashboard,  label: 'แดชบอร์ด' },
-  { href: '/dashboard/menu',       icon: UtensilsCrossed,  label: 'จัดการเมนู' },
-  { href: '/dashboard/orders',     icon: ClipboardList,    label: 'จัดการออเดอร์' },
-  { href: '/dashboard/analytics',  icon: BarChart2,        label: 'รายงานยอดขาย' },
-  { href: '/dashboard/settings',   icon: Settings,         label: 'ตั้งค่าร้าน' },
+  { href: '/dashboard',           icon: LayoutDashboard, label: 'แดชบอร์ด' },
+  { href: '/dashboard/menu',      icon: UtensilsCrossed, label: 'จัดการเมนู' },
+  { href: '/dashboard/orders',    icon: ClipboardList,   label: 'จัดการออเดอร์' },
+  { href: '/dashboard/debt',      icon: AlertCircle,     label: 'ลูกหนี้ค้างชำระ' },
+  { href: '/dashboard/analytics', icon: BarChart2,       label: 'รายงานยอดขาย' },
+  { href: '/dashboard/settings',  icon: Settings,        label: 'ตั้งค่าร้าน' },
 ]
 
 export function Sidebar() {
@@ -36,9 +37,16 @@ export function Sidebar() {
         {navItems.map((item) => {
           const active = pathname === item.href
           return (
-            <Link key={item.href} href={item.href}
+            <Link
+              key={item.href}
+              href={item.href}
               onClick={() => setMobileOpen(false)}
-              className={cn('sidebar-item', active ? 'sidebar-item-active' : 'sidebar-item-inactive')}>
+              className={cn(
+                'sidebar-item',
+                active ? 'sidebar-item-active' : 'sidebar-item-inactive',
+                item.href === '/dashboard/debt' && !active && 'text-red-500 hover:bg-red-50 hover:text-red-600'
+              )}
+            >
               <item.icon className="w-5 h-5 flex-shrink-0" />
               <span>{item.label}</span>
               {active && <div className="ml-auto w-1.5 h-1.5 bg-white/60 rounded-full" />}
@@ -59,8 +67,10 @@ export function Sidebar() {
 
   return (
     <>
-      <button onClick={() => setMobileOpen(!mobileOpen)}
-        className="md:hidden fixed top-4 left-4 z-50 w-10 h-10 bg-white rounded-xl shadow-md flex items-center justify-center text-gray-700">
+      <button
+        onClick={() => setMobileOpen(!mobileOpen)}
+        className="md:hidden fixed top-4 left-4 z-50 w-10 h-10 bg-white rounded-xl shadow-md flex items-center justify-center text-gray-700"
+      >
         {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
       </button>
 
@@ -68,8 +78,10 @@ export function Sidebar() {
         <div className="md:hidden fixed inset-0 bg-black/40 z-40" onClick={() => setMobileOpen(false)} />
       )}
 
-      <div className={cn('md:hidden fixed top-0 left-0 h-full w-72 bg-white shadow-2xl z-50 transition-transform duration-300',
-        mobileOpen ? 'translate-x-0' : '-translate-x-full')}>
+      <div className={cn(
+        'md:hidden fixed top-0 left-0 h-full w-72 bg-white shadow-2xl z-50 transition-transform duration-300',
+        mobileOpen ? 'translate-x-0' : '-translate-x-full'
+      )}>
         <SidebarContent />
       </div>
 

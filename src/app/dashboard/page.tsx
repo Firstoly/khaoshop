@@ -10,7 +10,7 @@ async function getDashboardData(shopId: string) {
   const todayStart = startOfDay(now)
   const todayEnd = endOfDay(now)
 
-  const [todayOrders, allMenuItems, recentOrders, pendingCount] = await Promise.all([
+  const [todayOrders, allMenuItems, recentOrders, pendingCount, debtCount, debtAmount] = await Promise.all([
     prisma.order.findMany({
       where: { shopId, createdAt: { gte: todayStart, lte: todayEnd }, status: { not: 'CANCELLED' } },
       include: { items: { include: { menuItem: true } } },
@@ -23,9 +23,26 @@ async function getDashboardData(shopId: string) {
       include: { items: { include: { menuItem: true } } },
     }),
     prisma.order.count({ where: { shopId, status: 'PENDING' } }),
+    // ลูกหนี้: เงินสดที่ยังไม่จ่าย (ไม่ว่าวันไหน)
+    prisma.order.count({
+      where: { shopId, paymentMethod: 'CASH', paymentStatus: 'PENDING', status: { not: 'CANCELLED' } }
+    }),
+    prisma.order.aggregate({
+      where: { shopId, paymentMethod: 'CASH', paymentStatus: 'PENDING', status: { not: 'CANCELLED' } },
+      _sum: { totalAmount: true }
+    }),
   ])
 
-  const todayRevenue = todayOrders.reduce((sum, o) => sum + o.totalAmount, 0)
+  // ยอดขายวันนี้ → นับเฉพาะที่ชำระแล้ว (VERIFIED) เท่านั้น
+  const todayRevenue = todayOrders
+    .filter(o => o.paymentStatus === 'VERIFIED')
+    .reduce((sum, o) => sum + o.totalAmount, 0)
+
+  // ยอดรอรับวันนี้ (สั่งแล้วแต่ยังไม่จ่าย)
+  const todayPending = todayOrders
+    .filter(o => o.paymentStatus === 'PENDING')
+    .reduce((sum, o) => sum + o.totalAmount, 0)
+
   const lowStock = allMenuItems.filter(m => (m.dailyLimit - m.soldCount) <= 3 && m.isAvailable)
 
   const soldMap: Record<string, { item: any; count: number }> = {}
@@ -37,7 +54,18 @@ async function getDashboardData(shopId: string) {
   })
   const topSelling = Object.values(soldMap).sort((a, b) => b.count - a.count).slice(0, 4)
 
-  return { todayOrderCount: todayOrders.length, todayRevenue, pendingCount, totalMenuItems: allMenuItems.length, lowStock, recentOrders, topSelling }
+  return {
+    todayOrderCount: todayOrders.length,
+    todayRevenue,
+    todayPending,
+    pendingCount,
+    totalMenuItems: allMenuItems.length,
+    lowStock,
+    recentOrders,
+    topSelling,
+    debtCount,
+    debtAmount: debtAmount._sum.totalAmount ?? 0,
+  }
 }
 
 export default async function DashboardPage() {
