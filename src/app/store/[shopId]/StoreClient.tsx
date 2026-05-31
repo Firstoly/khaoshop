@@ -183,7 +183,7 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
         </div>
       </div>
 
-      <div className="relative z-10 max-w-lg mx-auto px-4 -mt-3 pb-32">
+      <div className="relative z-10 max-w-lg mx-auto px-4 -mt-3 pb-36">
         {/* Category tabs */}
         {categories.length > 1 && (
           <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
@@ -246,7 +246,7 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
 
       {/* Cart button */}
       {cartCount > 0 && !showCart && !showForm && (
-        <div className="fixed bottom-6 left-0 right-0 px-4 max-w-lg mx-auto">
+        <div className="fixed bottom-6 left-0 right-0 px-4 max-w-lg mx-auto z-40" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
           <button onClick={() => setShowCart(true)}
             className="w-full bg-gradient-to-r from-brand-500 to-brand-600 text-white py-4 rounded-2xl shadow-brand flex items-center justify-between px-5 font-semibold">
             <div className="flex items-center gap-2">
