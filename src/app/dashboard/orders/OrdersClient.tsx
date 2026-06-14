@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { formatPrice, formatDate, getOrderStatusLabel, ORDER_STATUS_FLOW } from '@/lib/utils'
-import { Search, ClipboardList, Phone, MapPin, ChevronRight, CheckCircle, Loader2, X, QrCode, Banknote, BadgeCheck, Wallet } from 'lucide-react'
+import { Search, ClipboardList, Phone, MapPin, ChevronRight, CheckCircle, Loader2, X, QrCode, Banknote, BadgeCheck, Wallet, XCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { cn } from '@/lib/utils'
 
@@ -63,6 +63,25 @@ export function OrdersClient({ orders: initial }: { orders: any[] }) {
       setOrders(prev => prev.map(o => o.id === order.id ? updated : o))
       if (selected?.id === order.id) setSelected(updated)
       toast.success('รับเงินสดแล้ว ✅')
+    } catch { toast.error('เกิดข้อผิดพลาด') }
+    finally { setUpdating(null) }
+  }
+
+  // ปฏิเสธสลิปปลอม
+  async function rejectSlip(order: any) {
+    if (!confirm(`ปฏิเสธสลิปของ "${order.customerName}" ใช่ไหม?\nระบบจะลบสลิปและรอให้ลูกค้าส่งใหม่`)) return
+    setUpdating(order.id)
+    try {
+      const res = await fetch(`/api/orders/${order.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rejectSlip: true }),
+      })
+      if (!res.ok) throw new Error()
+      const updated = await res.json()
+      setOrders(prev => prev.map(o => o.id === order.id ? updated : o))
+      if (selected?.id === order.id) setSelected(updated)
+      toast.error('ปฏิเสธสลิปแล้ว ❌ รอลูกค้าส่งสลิปใหม่')
     } catch { toast.error('เกิดข้อผิดพลาด') }
     finally { setUpdating(null) }
   }
@@ -174,9 +193,14 @@ export function OrdersClient({ orders: initial }: { orders: any[] }) {
                             ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                             : order.paymentStatus === 'PAID'
                               ? 'bg-blue-50 text-blue-700 border-blue-200 animate-pulse'
-                              : 'bg-gray-50 text-gray-500 border-gray-200')}>
+                              : order.paymentStatus === 'REJECTED'
+                                ? 'bg-red-50 text-red-700 border-red-200'
+                                : 'bg-gray-50 text-gray-500 border-gray-200')}>
                           <QrCode className="w-2.5 h-2.5" />
-                          {order.paymentStatus === 'VERIFIED' ? 'โอนแล้ว' : order.paymentStatus === 'PAID' ? 'รอยืนยัน' : 'รอโอน'}
+                          {order.paymentStatus === 'VERIFIED' ? 'โอนแล้ว'
+                            : order.paymentStatus === 'PAID' ? 'รอยืนยัน'
+                            : order.paymentStatus === 'REJECTED' ? 'สลิปปลอม!'
+                            : 'รอโอน'}
                         </span>
                       )}
                     </div>
@@ -312,12 +336,16 @@ export function OrdersClient({ orders: initial }: { orders: any[] }) {
                         ? 'bg-emerald-100 text-emerald-700'
                         : selected.paymentStatus === 'PAID'
                           ? 'bg-blue-100 text-blue-700'
-                          : 'bg-gray-100 text-gray-600')}>
+                          : selected.paymentStatus === 'REJECTED'
+                            ? 'bg-red-100 text-red-700'
+                            : 'bg-gray-100 text-gray-600')}>
                       {selected.paymentStatus === 'VERIFIED'
                         ? '✅ ยืนยันแล้ว'
                         : selected.paymentStatus === 'PAID'
                           ? '📎 มีสลิป รอยืนยัน'
-                          : '⏳ รอโอนเงิน'}
+                          : selected.paymentStatus === 'REJECTED'
+                            ? '❌ ปฏิเสธสลิปแล้ว'
+                            : '⏳ รอโอนเงิน'}
                     </span>
                   </div>
 
@@ -332,15 +360,32 @@ export function OrdersClient({ orders: initial }: { orders: any[] }) {
                       />
                       {/* ปุ่มยืนยัน QR */}
                       {selected.paymentStatus === 'PAID' && (
-                        <button
-                          onClick={() => verifyQrPayment(selected)}
-                          disabled={updating === selected.id}
-                          className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-colors">
-                          {updating === selected.id
-                            ? <Loader2 className="w-4 h-4 animate-spin" />
-                            : <BadgeCheck className="w-4 h-4" />}
-                          ยืนยันรับเงินโอนแล้ว
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => verifyQrPayment(selected)}
+                            disabled={updating === selected.id}
+                            className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-colors">
+                            {updating === selected.id
+                              ? <Loader2 className="w-4 h-4 animate-spin" />
+                              : <BadgeCheck className="w-4 h-4" />}
+                            ยืนยันโอนแล้ว
+                          </button>
+                          <button
+                            onClick={() => rejectSlip(selected)}
+                            disabled={updating === selected.id}
+                            className="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-colors">
+                            {updating === selected.id
+                              ? <Loader2 className="w-4 h-4 animate-spin" />
+                              : <XCircle className="w-4 h-4" />}
+                            สลิปปลอม
+                          </button>
+                        </div>
+                      )}
+                      {selected.paymentStatus === 'REJECTED' && (
+                        <div className="flex items-center justify-center gap-2 text-red-600 bg-red-50 rounded-xl py-2.5 text-sm font-semibold">
+                          <XCircle className="w-4 h-4" />
+                          ปฏิเสธสลิปแล้ว — รอลูกค้าส่งใหม่
+                        </div>
                       )}
                       {selected.paymentStatus === 'VERIFIED' && (
                         <div className="flex items-center justify-center gap-2 text-emerald-600 bg-white rounded-xl py-2.5 text-sm font-semibold">

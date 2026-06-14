@@ -130,6 +130,7 @@ enum PaymentStatus {
   PENDING
   PAID
   VERIFIED
+  REJECTED
 }
 
 model PasswordResetToken {

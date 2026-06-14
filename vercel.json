@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/reset-stock",
       "schedule": "0 17 * * *"
+    },
+    {
+      "path": "/api/cron/keep-alive",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

@@ -28,6 +28,12 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   if (body.paymentStatus) data.paymentStatus = body.paymentStatus
   if (body.paymentSlipUrl) data.paymentSlipUrl = body.paymentSlipUrl
 
+  // ปฏิเสธสลิป → reset slip + mark REJECTED
+  if (body.rejectSlip) {
+    data.paymentStatus = 'REJECTED'
+    data.paymentSlipUrl = null
+  }
+
   const order = await prisma.order.update({
     where: { id: params.id },
     data,
