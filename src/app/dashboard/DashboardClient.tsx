@@ -1,23 +1,30 @@
 'use client'
 
-import { useState, useCallback } from 'react'
-import { formatPrice, formatDate, getOrderStatusLabel } from '@/lib/utils'
-import { ShoppingBag, TrendingUp, Clock, UtensilsCrossed, AlertTriangle, RefreshCw, ChefHat, Wallet, AlertCircle } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { formatPrice, getOrderStatusLabel } from '@/lib/utils'
+import { ShoppingBag, TrendingUp, Clock, UtensilsCrossed, AlertTriangle, RefreshCw, ChefHat, Wallet, AlertCircle, ClipboardList, ExternalLink, Plus } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useOrderNotification } from '@/hooks/useOrderNotification'
+import { useSession } from 'next-auth/react'
+import { useNotifications } from '@/contexts/NotificationContext'
 
-export function DashboardClient({ data, shopId }: { data: any; shopId: string }) {
+export function DashboardClient({ data, shopId: _ }: { data: any; shopId: string }) {
   const router = useRouter()
+  const { data: session } = useSession()
+  const { notifications } = useNotifications()
+  const shopSlug = (session?.user as any)?.shopSlug as string | undefined
   const [newOrderCount, setNewOrderCount] = useState(0)
   const [refreshing, setRefreshing] = useState(false)
+  const prevLenRef = useRef(notifications.length)
 
-  const handleNewOrder = useCallback(() => {
-    setNewOrderCount(prev => prev + 1)
-    router.refresh()
-  }, [router])
-
-  useOrderNotification({ shopId, onNewOrder: handleNewOrder })
+  // รับ notification ใหม่จาก global context แล้ว refresh หน้า
+  useEffect(() => {
+    if (notifications.length > prevLenRef.current) {
+      setNewOrderCount(c => c + notifications.length - prevLenRef.current)
+      router.refresh()
+    }
+    prevLenRef.current = notifications.length
+  }, [notifications.length, router])
 
   async function handleRefresh() {
     setRefreshing(true)
@@ -26,38 +33,10 @@ export function DashboardClient({ data, shopId }: { data: any; shopId: string })
   }
 
   const stats = [
-    {
-      label: 'ออเดอร์วันนี้',
-      value: data.todayOrderCount + newOrderCount,
-      unit: 'ออเดอร์',
-      icon: ShoppingBag,
-      bg: 'bg-orange-50',
-      text: 'text-brand-600',
-    },
-    {
-      label: 'ยอดรับเงินแล้ว',
-      value: formatPrice(data.todayRevenue),
-      unit: '',
-      icon: TrendingUp,
-      bg: 'bg-emerald-50',
-      text: 'text-emerald-600',
-    },
-    {
-      label: 'รอรับออเดอร์',
-      value: data.pendingCount,
-      unit: 'รายการ',
-      icon: Clock,
-      bg: 'bg-amber-50',
-      text: 'text-amber-600',
-    },
-    {
-      label: 'เมนูทั้งหมด',
-      value: data.totalMenuItems,
-      unit: 'เมนู',
-      icon: UtensilsCrossed,
-      bg: 'bg-violet-50',
-      text: 'text-violet-600',
-    },
+    { label: 'ออเดอร์วันนี้', value: data.todayOrderCount + newOrderCount, unit: 'ออเดอร์', icon: ShoppingBag, bg: 'bg-orange-50', text: 'text-brand-600' },
+    { label: 'ยอดรับเงินแล้ว', value: formatPrice(data.todayRevenue), unit: '', icon: TrendingUp, bg: 'bg-emerald-50', text: 'text-emerald-600' },
+    { label: 'รอรับออเดอร์', value: data.pendingCount, unit: 'รายการ', icon: Clock, bg: 'bg-amber-50', text: 'text-amber-600' },
+    { label: 'เมนูทั้งหมด', value: data.totalMenuItems, unit: 'เมนู', icon: UtensilsCrossed, bg: 'bg-violet-50', text: 'text-violet-600' },
   ]
 
   return (
@@ -139,6 +118,41 @@ export function DashboardClient({ data, shopId }: { data: any; shopId: string })
         ))}
       </div>
 
+      {/* Quick Actions */}
+      <div className="grid grid-cols-3 gap-3">
+        <Link href="/dashboard/orders"
+          className="card-base p-4 flex flex-col items-center gap-2 hover:shadow-card-hover transition-all text-center group cursor-pointer">
+          <div className="w-12 h-12 bg-orange-50 group-hover:bg-orange-100 rounded-xl flex items-center justify-center transition-colors relative">
+            <ClipboardList className="w-6 h-6 text-brand-500" />
+            {data.pendingCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                {data.pendingCount}
+              </span>
+            )}
+          </div>
+          <p className="font-semibold text-sm text-gray-800">ออเดอร์</p>
+          <p className="text-xs text-gray-400">{data.pendingCount > 0 ? `${data.pendingCount} รอดำเนินการ` : 'จัดการออเดอร์'}</p>
+        </Link>
+
+        <Link href="/dashboard/menu"
+          className="card-base p-4 flex flex-col items-center gap-2 hover:shadow-card-hover transition-all text-center group cursor-pointer">
+          <div className="w-12 h-12 bg-violet-50 group-hover:bg-violet-100 rounded-xl flex items-center justify-center transition-colors">
+            <Plus className="w-6 h-6 text-violet-500" />
+          </div>
+          <p className="font-semibold text-sm text-gray-800">เพิ่มเมนู</p>
+          <p className="text-xs text-gray-400">{data.totalMenuItems} เมนูในระบบ</p>
+        </Link>
+
+        <Link href={shopSlug ? `/store/${shopSlug}` : '#'} target="_blank"
+          className="card-base p-4 flex flex-col items-center gap-2 hover:shadow-card-hover transition-all text-center group cursor-pointer">
+          <div className="w-12 h-12 bg-emerald-50 group-hover:bg-emerald-100 rounded-xl flex items-center justify-center transition-colors">
+            <ExternalLink className="w-6 h-6 text-emerald-500" />
+          </div>
+          <p className="font-semibold text-sm text-gray-800">หน้าร้าน</p>
+          <p className="text-xs text-gray-400">ดูหน้าสั่งอาหาร</p>
+        </Link>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Orders */}
         <div className="lg:col-span-2 card-base p-5">
@@ -157,7 +171,8 @@ export function DashboardClient({ data, shopId }: { data: any; shopId: string })
             ) : data.recentOrders.map((order: any) => {
               const st = getOrderStatusLabel(order.status)
               return (
-                <div key={order.id} className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-orange-50 transition-colors">
+                <Link key={order.id} href="/dashboard/orders"
+                  className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-orange-50 transition-colors">
                   <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center shrink-0">
                     <span className="text-xs font-bold text-brand-500">#{String(order.queueNumber).padStart(3, '0')}</span>
                   </div>
@@ -176,7 +191,7 @@ export function DashboardClient({ data, shopId }: { data: any; shopId: string })
                     <span className={`status-badge ${st.bg} ${st.color} text-[10px] mb-1 block`}>{st.label}</span>
                     <p className="text-xs text-gray-500">{formatPrice(order.totalAmount)}</p>
                   </div>
-                </div>
+                </Link>
               )
             })}
           </div>
@@ -188,7 +203,7 @@ export function DashboardClient({ data, shopId }: { data: any; shopId: string })
             <div className="card-base p-5 border-l-4 border-amber-400">
               <div className="flex items-center gap-2 mb-3">
                 <AlertTriangle className="w-4 h-4 text-amber-500" />
-                <h2 className="font-display font-bold text-gray-900 text-sm">ใกล้หมด</h2>
+                <h2 className="font-display font-bold text-gray-900 text-sm">เมนูใกล้หมด</h2>
               </div>
               <div className="space-y-2">
                 {data.lowStock.map((item: any) => {

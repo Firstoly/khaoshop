@@ -17,6 +17,7 @@ interface MenuItem {
 export function MenuClient({ menuItems: initial, shopId }: { menuItems: MenuItem[]; shopId: string }) {
   const [menuItems, setMenuItems] = useState<MenuItem[]>(initial)
   const [search, setSearch] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState('ทั้งหมด')
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState<MenuItem | null>(null)
   const [loading, setLoading] = useState(false)
@@ -25,9 +26,11 @@ export function MenuClient({ menuItems: initial, shopId }: { menuItems: MenuItem
     category: 'แกงและต้ม', imageUrl: '', isAvailable: true,
   })
 
-  const filtered = menuItems.filter(m =>
-    m.name.toLowerCase().includes(search.toLowerCase()) || (m.category ?? '').includes(search)
-  )
+  const filtered = menuItems.filter(m => {
+    const matchSearch = m.name.toLowerCase().includes(search.toLowerCase()) || (m.category ?? '').includes(search)
+    const matchCategory = selectedCategory === 'ทั้งหมด' || m.category === selectedCategory
+    return matchSearch && matchCategory
+  })
 
   function openAdd() {
     setEditing(null)
@@ -99,6 +102,26 @@ export function MenuClient({ menuItems: initial, shopId }: { menuItems: MenuItem
       <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="ค้นหาเมนู..." className="input-base pl-10" />
+      </div>
+
+      {/* Category filter tabs */}
+      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+        {['ทั้งหมด', ...CATEGORIES].map(cat => {
+          const count = cat === 'ทั้งหมด' ? menuItems.length : menuItems.filter(m => m.category === cat).length
+          return (
+            <button key={cat} onClick={() => setSelectedCategory(cat)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold whitespace-nowrap shrink-0 transition-all ${
+                selectedCategory === cat ? 'bg-brand-500 text-white shadow-brand' : 'bg-white text-gray-600 border border-gray-200 hover:border-brand-300'
+              }`}>
+              {cat}
+              {count > 0 && (
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${selectedCategory === cat ? 'bg-white/20' : 'bg-gray-100'}`}>
+                  {count}
+                </span>
+              )}
+            </button>
+          )
+        })}
       </div>
 
       {filtered.length === 0 ? (
