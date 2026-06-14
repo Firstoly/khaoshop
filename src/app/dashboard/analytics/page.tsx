@@ -8,13 +8,16 @@ import { startOfDay, subDays, format } from 'date-fns'
 async function getAnalyticsData(shopId: string) {
   const today = startOfDay(new Date())
 
-  // Last 30 days daily revenue
+  // เงื่อนไขหลัก: ได้รับเงินแล้ว (VERIFIED) เท่านั้น
+  const paidWhere = { shopId, status: { not: 'CANCELLED' as const }, paymentStatus: 'VERIFIED' as const }
+
+  // Last 30 days daily revenue (เฉพาะที่รับเงินแล้ว)
   const dailyData = await Promise.all(
     Array.from({ length: 30 }, (_, i) => {
       const date = subDays(today, 29 - i)
       const nextDate = subDays(today, 28 - i)
       return prisma.order.aggregate({
-        where: { shopId, status: { not: 'CANCELLED' }, createdAt: { gte: date, lt: nextDate } },
+        where: { ...paidWhere, createdAt: { gte: date, lt: nextDate } },
         _sum: { totalAmount: true },
         _count: { id: true },
       }).then(r => ({
@@ -25,13 +28,13 @@ async function getAnalyticsData(shopId: string) {
     })
   )
 
-  // Weekly summary (last 4 weeks)
+  // Weekly summary (last 8 weeks, เฉพาะที่รับเงินแล้ว)
   const weeklyData = await Promise.all(
     Array.from({ length: 8 }, (_, i) => {
       const weekStart = subDays(today, (7 - i) * 7)
       const weekEnd = subDays(today, (6 - i) * 7)
       return prisma.order.aggregate({
-        where: { shopId, status: { not: 'CANCELLED' }, createdAt: { gte: weekStart, lt: weekEnd } },
+        where: { ...paidWhere, createdAt: { gte: weekStart, lt: weekEnd } },
         _sum: { totalAmount: true },
         _count: { id: true },
       }).then(r => ({
@@ -42,10 +45,10 @@ async function getAnalyticsData(shopId: string) {
     })
   )
 
-  // Top menu items (all time)
+  // Top menu items (all time, เฉพาะที่รับเงินแล้ว)
   const topMenus = await prisma.orderItem.groupBy({
     by: ['menuItemId'],
-    where: { order: { shopId, status: { not: 'CANCELLED' } } },
+    where: { order: paidWhere },
     _sum: { quantity: true },
     _count: { id: true },
     orderBy: { _sum: { quantity: 'desc' } },
@@ -63,20 +66,27 @@ async function getAnalyticsData(shopId: string) {
     })
   )
 
-  // Payment method breakdown (this month)
+  // Payment method breakdown (30 วันล่าสุด, เฉพาะที่รับเงินแล้ว)
   const monthStart = subDays(today, 30)
   const [cashCount, qrCount] = await Promise.all([
-    prisma.order.count({ where: { shopId, paymentMethod: 'CASH', status: { not: 'CANCELLED' }, createdAt: { gte: monthStart } } }),
-    prisma.order.count({ where: { shopId, paymentMethod: 'PROMPTPAY', status: { not: 'CANCELLED' }, createdAt: { gte: monthStart } } }),
+    prisma.order.count({ where: { ...paidWhere, paymentMethod: 'CASH', createdAt: { gte: monthStart } } }),
+    prisma.order.count({ where: { ...paidWhere, paymentMethod: 'PROMPTPAY', createdAt: { gte: monthStart } } }),
   ])
 
-  // Summary stats
+  // Summary stats (เฉพาะที่รับเงินแล้ว)
   const [totalOrders, totalRevenue, thisMonthOrders, thisMonthRevenue] = await Promise.all([
-    prisma.order.count({ where: { shopId, status: { not: 'CANCELLED' } } }),
-    prisma.order.aggregate({ where: { shopId, status: { not: 'CANCELLED' } }, _sum: { totalAmount: true } }),
-    prisma.order.count({ where: { shopId, status: { not: 'CANCELLED' }, createdAt: { gte: monthStart } } }),
-    prisma.order.aggregate({ where: { shopId, status: { not: 'CANCELLED' }, createdAt: { gte: monthStart } }, _sum: { totalAmount: true } }),
+    prisma.order.count({ where: paidWhere }),
+    prisma.order.aggregate({ where: paidWhere, _sum: { totalAmount: true } }),
+    prisma.order.count({ where: { ...paidWhere, createdAt: { gte: monthStart } } }),
+    prisma.order.aggregate({ where: { ...paidWhere, createdAt: { gte: monthStart } }, _sum: { totalAmount: true } }),
   ])
+
+  // ยอดค้างชำระ (ไม่ถูก CANCELLED และยังไม่ VERIFIED)
+  const unpaidResult = await prisma.order.aggregate({
+    where: { shopId, status: { not: 'CANCELLED' }, paymentStatus: { not: 'VERIFIED' } },
+    _sum: { totalAmount: true },
+    _count: { id: true },
+  })
 
   return {
     dailyData,
@@ -88,7 +98,11 @@ async function getAnalyticsData(shopId: string) {
       totalRevenue: totalRevenue._sum.totalAmount ?? 0,
       thisMonthOrders,
       thisMonthRevenue: thisMonthRevenue._sum.totalAmount ?? 0,
-    }
+    },
+    unpaid: {
+      amount: unpaidResult._sum.totalAmount ?? 0,
+      count: unpaidResult._count.id,
+    },
   }
 }
 

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts'
-import { TrendingUp, ShoppingBag, Calendar, Award, Banknote, QrCode } from 'lucide-react'
+import { TrendingUp, ShoppingBag, Calendar, Award, Banknote, QrCode, AlertCircle } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 
 const COLORS = ['#f97316', '#fb923c', '#fdba74', '#fed7aa', '#ffedd5', '#fef3c7', '#fde68a', '#fcd34d', '#fbbf24', '#f59e0b']
@@ -19,10 +19,10 @@ export function AnalyticsClient({ data }: { data: any }) {
   ]
 
   const stats = [
-    { label: 'ออเดอร์ทั้งหมด', value: data.summary.totalOrders.toLocaleString(), unit: 'ออเดอร์', icon: ShoppingBag, bg: 'bg-orange-50', text: 'text-brand-600' },
-    { label: 'รายได้รวม', value: formatPrice(data.summary.totalRevenue), unit: '', icon: TrendingUp, bg: 'bg-emerald-50', text: 'text-emerald-600' },
-    { label: 'ออเดอร์เดือนนี้', value: data.summary.thisMonthOrders.toLocaleString(), unit: 'ออเดอร์', icon: Calendar, bg: 'bg-blue-50', text: 'text-blue-600' },
-    { label: 'รายได้เดือนนี้', value: formatPrice(data.summary.thisMonthRevenue), unit: '', icon: Award, bg: 'bg-violet-50', text: 'text-violet-600' },
+    { label: 'ออเดอร์ที่รับเงินแล้ว', value: data.summary.totalOrders.toLocaleString(), unit: 'ออเดอร์', icon: ShoppingBag, bg: 'bg-orange-50', text: 'text-brand-600' },
+    { label: 'รายได้รวม (รับแล้ว)', value: formatPrice(data.summary.totalRevenue), unit: '', icon: TrendingUp, bg: 'bg-emerald-50', text: 'text-emerald-600' },
+    { label: 'ออเดอร์เดือนนี้ (รับแล้ว)', value: data.summary.thisMonthOrders.toLocaleString(), unit: 'ออเดอร์', icon: Calendar, bg: 'bg-blue-50', text: 'text-blue-600' },
+    { label: 'รายได้เดือนนี้ (รับแล้ว)', value: formatPrice(data.summary.thisMonthRevenue), unit: '', icon: Award, bg: 'bg-violet-50', text: 'text-violet-600' },
   ]
 
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -45,6 +45,22 @@ export function AnalyticsClient({ data }: { data: any }) {
         <h1 className="font-display text-2xl font-bold text-gray-900">รายงานยอดขาย</h1>
         <p className="text-sm text-gray-400 mt-0.5">วิเคราะห์ข้อมูลร้านของคุณ</p>
       </div>
+
+      {/* Unpaid alert */}
+      {data.unpaid.count > 0 && (
+        <div className="card-base p-4 border-l-4 border-red-400 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center shrink-0">
+              <AlertCircle className="w-5 h-5 text-red-500" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-red-600">ยังไม่ได้รับเงิน</p>
+              <p className="text-xs text-gray-500">{data.unpaid.count} ออเดอร์ที่ยังค้างชำระ</p>
+            </div>
+          </div>
+          <p className="font-display text-2xl font-black text-red-500 shrink-0">{formatPrice(data.unpaid.amount)}</p>
+        </div>
+      )}
 
       {/* Summary stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
