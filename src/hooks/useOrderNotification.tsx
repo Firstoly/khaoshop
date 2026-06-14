@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { getPusherClient, PUSHER_EVENTS, getShopChannel } from '@/lib/pusher'
 import toast from 'react-hot-toast'
 
@@ -55,6 +56,7 @@ export function stopAlertSound() {
 }
 
 export function useOrderNotification({ shopId, onNewOrder, enabled = true }: UseOrderNotificationOptions) {
+  const router = useRouter()
   const channelRef = useRef<any>(null)
   const audioUnlockedRef = useRef(false)
 
@@ -118,10 +120,10 @@ export function useOrderNotification({ shopId, onNewOrder, enabled = true }: Use
                   </span>
                 </div>
                 <button
-                  onClick={() => { stopAlertSound(); toast.dismiss(t.id) }}
+                  onClick={() => { stopAlertSound(); toast.dismiss(t.id); router.push('/dashboard/orders') }}
                   className="mt-2 w-full py-1.5 bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold rounded-lg transition-colors"
                 >
-                  ✓ รับทราบ — หยุดเสียง
+                  ✓ รับทราบ — ดูออเดอร์
                 </button>
               </div>
             </div>
@@ -138,5 +140,5 @@ export function useOrderNotification({ shopId, onNewOrder, enabled = true }: Use
       pusher.unsubscribe(getShopChannel(shopId))
       stopAlertSound()
     }
-  }, [shopId, enabled, onNewOrder])
+  }, [shopId, enabled, onNewOrder, router])
 }
