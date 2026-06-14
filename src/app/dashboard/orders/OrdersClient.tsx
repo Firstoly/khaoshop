@@ -10,11 +10,12 @@ const STATUS_TABS = [
   { key: 'ALL',       label: 'ทั้งหมด' },
   { key: 'PENDING',   label: 'รอรับ' },
   { key: 'CONFIRMED', label: 'รับแล้ว' },
-  { key: 'PREPARING', label: 'กำลังทำ' },
   { key: 'READY',     label: 'เสร็จแล้ว' },
   { key: 'DELIVERED', label: 'ส่งแล้ว' },
   { key: 'CANCELLED', label: 'ยกเลิก' },
 ]
+
+const ACTIVE_STATUSES = ['PENDING', 'CONFIRMED']
 
 export function OrdersClient({ orders: initial }: { orders: any[] }) {
   const [orders, setOrders] = useState(initial)
@@ -24,7 +25,7 @@ export function OrdersClient({ orders: initial }: { orders: any[] }) {
   const [updating, setUpdating] = useState<string | null>(null)
 
   const filtered = orders.filter(o => {
-    const matchTab = tab === 'ALL' || o.status === tab
+    const matchTab = tab === 'ALL' ? ACTIVE_STATUSES.includes(o.status) : o.status === tab
     const matchSearch =
       o.customerName.includes(search) ||
       o.customerPhone.includes(search) ||
@@ -110,7 +111,9 @@ export function OrdersClient({ orders: initial }: { orders: any[] }) {
   }
 
   const countByStatus = (s: string) =>
-    s === 'ALL' ? orders.length : orders.filter(o => o.status === s).length
+    s === 'ALL'
+      ? orders.filter(o => ACTIVE_STATUSES.includes(o.status)).length
+      : orders.filter(o => o.status === s).length
 
   return (
     <div className="max-w-6xl mx-auto space-y-5">
@@ -281,6 +284,31 @@ export function OrdersClient({ orders: initial }: { orders: any[] }) {
                 )}
               </div>
 
+              {/* Items — แสดงก่อน เพื่อให้เห็นทันทีว่าต้องทำอะไร */}
+              <div className="bg-brand-50 rounded-2xl p-4 border border-brand-100">
+                <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2 text-base">
+                  🍽️ รายการอาหาร
+                </h3>
+                <div className="space-y-2">
+                  {selected.items.map((item: any) => (
+                    <div key={item.id} className="flex items-center gap-3 bg-white rounded-xl p-3 shadow-sm">
+                      <div className="w-11 h-11 bg-brand-500 rounded-xl flex items-center justify-center shrink-0">
+                        <span className="text-white font-black text-xl">{item.quantity}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-gray-900 text-base leading-tight">{item.menuItem.name}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">{formatPrice(item.price)} / ชิ้น</p>
+                      </div>
+                      <p className="font-bold text-brand-500 shrink-0">{formatPrice(item.price * item.quantity)}</p>
+                    </div>
+                  ))}
+                  <div className="flex justify-between pt-2 mt-1 border-t border-brand-200 font-bold">
+                    <span className="text-gray-700">รวม</span>
+                    <span className="text-brand-500 text-xl">{formatPrice(selected.totalAmount)}</span>
+                  </div>
+                </div>
+              </div>
+
               {/* ===== CASH PAYMENT ===== */}
               {selected.paymentMethod === 'CASH' && (
                 <div className="rounded-2xl p-4 bg-amber-50 border border-amber-100 space-y-3">
@@ -401,26 +429,6 @@ export function OrdersClient({ orders: initial }: { orders: any[] }) {
                   )}
                 </div>
               )}
-
-              {/* Items */}
-              <div>
-                <h3 className="font-semibold text-gray-800 mb-3 text-sm">รายการอาหาร</h3>
-                <div className="space-y-2">
-                  {selected.items.map((item: any) => (
-                    <div key={item.id} className="flex items-center justify-between py-2 border-b border-gray-50">
-                      <div>
-                        <p className="text-sm font-medium text-gray-800">{item.menuItem.name}</p>
-                        <p className="text-xs text-gray-400">{formatPrice(item.price)} × {item.quantity}</p>
-                      </div>
-                      <p className="font-bold text-gray-900">{formatPrice(item.price * item.quantity)}</p>
-                    </div>
-                  ))}
-                  <div className="flex justify-between pt-2 font-bold">
-                    <span className="text-gray-900">รวม</span>
-                    <span className="text-brand-500 text-lg">{formatPrice(selected.totalAmount)}</span>
-                  </div>
-                </div>
-              </div>
 
               {/* Status */}
               <div>

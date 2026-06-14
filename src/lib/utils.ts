@@ -46,7 +46,6 @@ export function getOrderStatusLabel(status: string) {
 export const ORDER_STATUS_FLOW = [
   'PENDING',
   'CONFIRMED',
-  'PREPARING',
   'READY',
   'DELIVERED',
 ]
