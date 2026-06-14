@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const order = await prisma.order.findUnique({
     where: { id: params.id },
     include: { items: { include: { menuItem: true } } },
@@ -15,6 +15,12 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const shopId = (session.user as any).shopId
+
+  const existing = await prisma.order.findUnique({ where: { id: params.id } })
+  if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  if (existing.shopId !== shopId) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const body = await req.json()
   const data: any = {}
