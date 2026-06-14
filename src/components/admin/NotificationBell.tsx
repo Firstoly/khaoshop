@@ -1,59 +1,25 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import { Bell, X, ShoppingBag, Volume2, VolumeX } from 'lucide-react'
-import { useOrderNotification, stopAlertSound } from '@/hooks/useOrderNotification'
+import { useNotifications } from '@/contexts/NotificationContext'
+import { stopAlertSound } from '@/hooks/useOrderNotification'
 import { formatPrice } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 
-interface Notification {
-  id: string
-  queueNumber: number
-  customerName: string
-  totalAmount: number
-  paymentMethod: string
-  items: { name: string; quantity: number }[]
-  createdAt: string
-  read: boolean
-}
-
-export function NotificationBell({ shopId }: { shopId: string }) {
-  const [notifications, setNotifications] = useState<Notification[]>([])
+export function NotificationBell({ shopId: _ }: { shopId: string }) {
+  const { notifications, unreadCount, soundEnabled, setSoundEnabled, markAllRead, clearAll } = useNotifications()
   const [open, setOpen] = useState(false)
-  const [soundEnabled, setSoundEnabled] = useState(true)
   const [pulse, setPulse] = useState(false)
 
-  const unreadCount = notifications.filter(n => !n.read).length
-
-  const handleNewOrder = useCallback((order: any) => {
-    const notif: Notification = {
-      id: order.orderId,
-      queueNumber: order.queueNumber,
-      customerName: order.customerName,
-      totalAmount: order.totalAmount,
-      paymentMethod: order.paymentMethod,
-      items: order.items,
-      createdAt: order.createdAt,
-      read: false,
+  // pulse เมื่อมีการแจ้งเตือนใหม่
+  useEffect(() => {
+    if (unreadCount > 0) {
+      setPulse(true)
+      const t = setTimeout(() => setPulse(false), 1000)
+      return () => clearTimeout(t)
     }
-    setNotifications(prev => [notif, ...prev].slice(0, 20))
-    setPulse(true)
-    setTimeout(() => setPulse(false), 1000)
-
-    // Browser notification (if permitted)
-    if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification('🛎️ ออเดอร์ใหม่!', {
-        body: `${order.customerName} - ฿${order.totalAmount.toLocaleString()}`,
-        icon: '/favicon.ico',
-      })
-    }
-  }, [])
-
-  useOrderNotification({
-    shopId,
-    onNewOrder: handleNewOrder,
-    enabled: soundEnabled,
-  })
+  }, [unreadCount])
 
   // Request browser notification permission
   useEffect(() => {
@@ -62,20 +28,14 @@ export function NotificationBell({ shopId }: { shopId: string }) {
     }
   }, [])
 
-  function markAllRead() {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })))
-  }
-
-  function clearAll() {
-    setNotifications([])
-    setOpen(false)
-  }
-
   return (
     <div className="relative">
       {/* Bell button */}
       <button
-        onClick={() => { setOpen(!open); if (!open) { markAllRead(); stopAlertSound() } }}
+        onClick={() => {
+          setOpen(o => !o)
+          if (!open) { markAllRead(); stopAlertSound() }
+        }}
         className={cn(
           'relative w-9 h-9 rounded-xl flex items-center justify-center transition-all',
           pulse ? 'bg-brand-500 text-white scale-110' : 'bg-gray-50 hover:bg-orange-50 text-gray-500 hover:text-brand-500'
@@ -105,7 +65,6 @@ export function NotificationBell({ shopId }: { shopId: string }) {
                 )}
               </div>
               <div className="flex items-center gap-1">
-                {/* Sound toggle */}
                 <button
                   onClick={() => setSoundEnabled(!soundEnabled)}
                   className={cn('w-7 h-7 rounded-lg flex items-center justify-center transition-colors text-xs',
@@ -115,7 +74,10 @@ export function NotificationBell({ shopId }: { shopId: string }) {
                   {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
                 </button>
                 {notifications.length > 0 && (
-                  <button onClick={clearAll} className="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-400">
+                  <button
+                    onClick={() => { clearAll(); setOpen(false) }}
+                    className="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-400"
+                  >
                     <X className="w-3.5 h-3.5" />
                   </button>
                 )}
@@ -131,7 +93,7 @@ export function NotificationBell({ shopId }: { shopId: string }) {
                   <p className="text-[10px] mt-1 text-gray-300">จะแจ้งทันทีเมื่อมีออเดอร์ใหม่</p>
                 </div>
               ) : (
-                notifications.map((notif) => (
+                notifications.map(notif => (
                   <div
                     key={notif.id}
                     className={cn(
