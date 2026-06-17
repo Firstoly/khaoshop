@@ -218,14 +218,14 @@ export function KitchenClient({ orders: initial, shopId }: { orders: Order[]; sh
                   return (
                     <th key={name} className="px-3 py-4 border-b-2 border-gray-100 min-w-[140px] bg-gray-50">
                       <div className={cn(
-                        'font-display font-bold text-sm leading-tight text-center',
+                        'font-display font-bold text-base leading-tight text-center',
                         allDone ? 'text-emerald-400 line-through' : 'text-gray-800'
                       )}>
                         {name}
                       </div>
                       <div className="flex justify-center mt-1.5">
                         <span className={cn(
-                          'text-[11px] font-bold px-2.5 py-0.5 rounded-full',
+                          'text-sm font-bold px-2.5 py-0.5 rounded-full',
                           allDone
                             ? 'bg-emerald-50 text-emerald-500'
                             : 'bg-brand-50 text-brand-500'
@@ -287,30 +287,30 @@ export function KitchenClient({ orders: initial, shopId }: { orders: Order[]; sh
                       const slot = itemsByMenu.get(name)
                       if (!slot) {
                         return (
-                          <td key={name} className="px-3 py-3">
-                            <div className="w-full h-14 rounded-xl bg-gray-50/50 border border-dashed border-gray-100" />
+                          <td key={name} className="px-3 py-2 text-center text-gray-300 font-bold text-lg">
+                            -
                           </td>
                         )
                       }
                       const done = checked.has(slot.key)
                       return (
-                        <td key={name} className="px-3 py-3">
+                        <td key={name} className="px-3 py-2">
                           <button
                             onClick={() => toggleCheck(slot.key)}
                             className={cn(
-                              'w-full h-14 rounded-xl border-2 transition-all flex items-center gap-2.5 px-3 group',
+                              'w-full h-10 rounded-xl border-2 transition-all flex items-center gap-2 px-3 group',
                               done
                                 ? 'bg-emerald-50 border-emerald-200'
                                 : 'bg-white border-gray-200 hover:border-brand-400 hover:bg-orange-50 shadow-sm hover:shadow'
                             )}
                           >
                             {done
-                              ? <CheckSquare className="w-5 h-5 text-emerald-400 shrink-0" />
-                              : <Square className="w-5 h-5 text-gray-300 shrink-0 group-hover:text-brand-400" />
+                              ? <CheckSquare className="w-4 h-4 text-emerald-400 shrink-0" />
+                              : <Square className="w-4 h-4 text-gray-300 shrink-0 group-hover:text-brand-400" />
                             }
                             <div className="flex items-baseline gap-1">
                               <span className={cn(
-                                'text-3xl font-black leading-none',
+                                'text-xl font-black leading-none',
                                 done ? 'text-emerald-300 line-through decoration-emerald-300' : 'text-brand-500'
                               )}>
                                 {slot.quantity}
