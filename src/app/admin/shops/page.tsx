@@ -2,7 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { formatPrice } from '@/lib/utils'
 import { startOfDay, endOfDay } from 'date-fns'
 import Link from 'next/link'
-import { ExternalLink, Store, TrendingUp, ShoppingBag, UtensilsCrossed } from 'lucide-react'
+import { ExternalLink, Store, TrendingUp, ShoppingBag, UtensilsCrossed, ChevronRight } from 'lucide-react'
 
 async function getShops() {
   const today = new Date()
@@ -96,6 +96,11 @@ export default async function ShopsPage() {
                     <p className="text-xs text-gray-400">ออเดอร์รวม</p>
                     <p className="font-display font-bold text-gray-700">{shop._count.orders}</p>
                   </div>
+                  <Link href={`/admin/shops/${shop.id}`}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-violet-50 hover:bg-violet-100 text-violet-700 rounded-xl text-xs font-semibold transition-colors">
+                    <ChevronRight className="w-3.5 h-3.5" />
+                    เข้าดูร้าน
+                  </Link>
                   <Link href={`/store/${shop.slug}`} target="_blank"
                     className="w-9 h-9 bg-blue-50 hover:bg-blue-100 rounded-xl flex items-center justify-center text-blue-400 hover:text-blue-600 transition-colors">
                     <ExternalLink className="w-4 h-4" />
