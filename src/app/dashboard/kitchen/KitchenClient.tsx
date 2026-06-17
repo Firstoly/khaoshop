@@ -76,27 +76,33 @@ export function KitchenClient({ orders: initial, shopId }: { orders: Order[]; sh
   const checkedItems = checked.size
   const progressPct = totalItems > 0 ? Math.round((checkedItems / totalItems) * 100) : 0
 
+  // build menu → order slots map
+  const menuMap = new Map<string, Array<{ key: string; queueNumber: number; customerName: string; quantity: number }>>()
   const activeOrders = hideCompleted ? orders.filter(o => !isOrderDone(o)) : orders
-
-  // collect all unique menu names → columns
-  const menuNames: string[] = []
   for (const order of activeOrders) {
     for (const item of order.items) {
-      if (!menuNames.includes(item.menuItem.name)) menuNames.push(item.menuItem.name)
+      const name = item.menuItem.name
+      if (!menuMap.has(name)) menuMap.set(name, [])
+      menuMap.get(name)!.push({
+        key: `${order.id}-${item.id}`,
+        queueNumber: order.queueNumber,
+        customerName: order.customerName,
+        quantity: item.quantity,
+      })
     }
   }
 
-  // build per-order rows with cell data per menu column
-  type Cell = { key: string; quantity: number } | null
-  const tableRows = activeOrders.map(order => {
-    const cells: Record<string, Cell> = {}
-    for (const item of order.items) {
-      cells[item.menuItem.name] = { key: `${order.id}-${item.id}`, quantity: item.quantity }
-    }
-    return { order, cells }
-  }).sort((a, b) => a.order.queueNumber - b.order.queueNumber)
+  // sort: incomplete menus first
+  const menuRows = Array.from(menuMap.entries())
+    .map(([name, slots]) => ({ name, slots }))
+    .sort((a, b) => {
+      const aDone = a.slots.every(s => checked.has(s.key))
+      const bDone = b.slots.every(s => checked.has(s.key))
+      return Number(aDone) - Number(bDone)
+    })
 
-  const totalMenuItems = activeOrders.reduce((s, o) => s + o.items.reduce((ss, i) => ss + i.quantity, 0), 0)
+  const maxSlots = menuRows.reduce((m, r) => Math.max(m, r.slots.length), 0)
+  const totalMenuItems = menuRows.reduce((s, r) => s + r.slots.reduce((ss, sl) => ss + sl.quantity, 0), 0)
 
   return (
     <div className="max-w-6xl mx-auto space-y-5 animate-fade-in">
@@ -166,7 +172,7 @@ export function KitchenClient({ orders: initial, shopId }: { orders: Order[]; sh
       </div>
 
       {/* ══════════ ตาราง checklist ══════════ */}
-      {tableRows.length === 0 ? (
+      {menuRows.length === 0 ? (
         <div className="text-center py-16 text-gray-400">
           <ClipboardList className="w-14 h-14 mx-auto mb-3 opacity-20" />
           <p className="font-medium">ไม่มีออเดอร์ที่ต้องเตรียม</p>
@@ -177,78 +183,81 @@ export function KitchenClient({ orders: initial, shopId }: { orders: Order[]; sh
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr>
-                {/* Queue column header */}
-                <th className="px-4 py-3.5 text-left font-semibold text-gray-500 bg-gray-50 border-b border-gray-100 sticky left-0 z-10 min-w-[130px]">
-                  คิว / ชื่อ
+                {/* Menu name column header */}
+                <th className="px-5 py-3.5 text-left font-semibold text-gray-500 bg-gray-50 border-b border-gray-100 sticky left-0 z-10 min-w-[160px]">
+                  <div className="flex items-center gap-2">
+                    <ChefHat className="w-4 h-4 text-brand-400" />
+                    ชื่อเมนู
+                  </div>
                 </th>
-                {/* Menu name columns */}
-                {menuNames.map(name => (
-                  <th key={name} className="px-4 py-3.5 text-center bg-gray-50 border-b border-gray-100 min-w-[130px]">
-                    <div className="flex items-center justify-center gap-1.5">
-                      <ChefHat className="w-3.5 h-3.5 text-brand-400 shrink-0" />
-                      <span className="font-semibold text-gray-700 leading-tight">{name}</span>
-                    </div>
+                {/* คนที่สั่ง columns */}
+                {Array.from({ length: maxSlots }).map((_, i) => (
+                  <th key={i} className="px-4 py-3.5 text-center font-semibold text-gray-400 bg-gray-50 border-b border-gray-100 min-w-[150px]">
+                    คนที่สั่ง {i + 1}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {tableRows.map(({ order, cells }) => {
-                const orderDone = isOrderDone(order)
-                const st = getOrderStatusLabel(order.status)
+              {menuRows.map(row => {
+                const allDone = row.slots.every(s => checked.has(s.key))
+                const doneCnt = row.slots.filter(s => checked.has(s.key)).length
+                const rowTotal = row.slots.reduce((s, sl) => s + sl.quantity, 0)
                 return (
-                  <tr key={order.id} className={cn('transition-colors', orderDone ? 'bg-emerald-50/60' : 'hover:bg-gray-50/30')}>
-                    {/* Queue / Name cell */}
+                  <tr key={row.name} className={cn('transition-colors', allDone ? 'bg-emerald-50/60' : 'hover:bg-gray-50/50')}>
+                    {/* Menu name cell */}
                     <td className={cn(
-                      'px-4 py-3.5 sticky left-0 z-10 border-r border-gray-100',
-                      orderDone ? 'bg-emerald-50' : 'bg-white'
+                      'px-5 py-4 sticky left-0 z-10 border-r border-gray-100',
+                      allDone ? 'bg-emerald-50' : 'bg-white'
                     )}>
-                      <div className="flex items-center gap-2">
-                        <div className={cn(
-                          'w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-white text-[10px] font-black',
-                          orderDone ? 'bg-emerald-500' : 'bg-gradient-to-br from-brand-500 to-brand-600'
-                        )}>
-                          {orderDone ? '✓' : `#${String(order.queueNumber).padStart(3, '0')}`}
-                        </div>
-                        <div>
-                          <p className={cn('text-sm font-bold leading-tight',
-                            orderDone ? 'text-emerald-700 line-through' : 'text-gray-900')}>
-                            {order.customerName}
-                          </p>
-                          <span className={`status-badge text-[9px] ${st.bg} ${st.color} mt-0.5`}>{st.label}</span>
-                        </div>
+                      <div className={cn('font-display font-bold text-base leading-tight', allDone && 'line-through text-emerald-600')}>
+                        {row.name}
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className={cn('text-xs font-semibold',
+                          allDone ? 'text-emerald-500' : 'text-brand-500')}>
+                          รวม {rowTotal} จาน
+                        </span>
+                        <span className="text-xs text-gray-300">·</span>
+                        <span className="text-xs text-gray-400">{doneCnt}/{row.slots.length}</span>
                       </div>
                     </td>
-                    {/* Menu cells */}
-                    {menuNames.map(name => {
-                      const cell = cells[name]
-                      if (!cell) {
+                    {/* Order cells */}
+                    {Array.from({ length: maxSlots }).map((_, i) => {
+                      const slot = row.slots[i]
+                      if (!slot) {
                         return (
-                          <td key={name} className="px-4 py-3.5 text-center">
-                            <span className="text-gray-200 text-lg">—</span>
+                          <td key={i} className="px-4 py-4">
+                            <div className="w-full h-full min-h-[2rem]" />
                           </td>
                         )
                       }
-                      const done = checked.has(cell.key)
+                      const done = checked.has(slot.key)
                       return (
-                        <td key={name} className="px-3 py-3">
+                        <td key={i} className="px-4 py-4">
                           <button
-                            onClick={() => toggleCheck(cell.key)}
+                            onClick={() => toggleCheck(slot.key)}
                             className={cn(
-                              'w-full flex flex-col items-center gap-1 p-2.5 rounded-xl border text-center transition-all group',
+                              'w-full flex items-center gap-2 p-2.5 rounded-xl border text-left transition-all group',
                               done
                                 ? 'bg-emerald-50 border-emerald-200'
                                 : 'bg-gray-50 border-gray-200 hover:bg-brand-50 hover:border-brand-300'
                             )}
                           >
                             {done
-                              ? <CheckSquare className="w-5 h-5 text-emerald-500" />
-                              : <Square className="w-5 h-5 text-gray-300 group-hover:text-brand-400" />
+                              ? <CheckSquare className="w-4 h-4 text-emerald-500 shrink-0" />
+                              : <Square className="w-4 h-4 text-gray-300 shrink-0 group-hover:text-brand-400" />
                             }
-                            <span className={cn('text-xs font-bold',
-                              done ? 'text-emerald-500' : 'text-brand-500')}>
-                              ×{cell.quantity}
-                            </span>
+                            <div className={cn('min-w-0', done && 'opacity-50')}>
+                              <p className={cn('text-xs font-bold leading-tight',
+                                done ? 'text-emerald-600 line-through' : 'text-gray-800')}>
+                                #{String(slot.queueNumber).padStart(3, '0')} {slot.customerName}
+                              </p>
+                              <p className={cn('text-xs mt-0.5 font-semibold',
+                                done ? 'text-emerald-400' : 'text-brand-500')}>
+                                ×{slot.quantity} จาน
+                              </p>
+                            </div>
                           </button>
                         </td>
                       )
