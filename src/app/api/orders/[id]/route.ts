@@ -16,11 +16,19 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  const userRole = (session.user as any).role
   const shopId = (session.user as any).shopId
 
-  const existing = await prisma.order.findUnique({ where: { id: params.id } })
+  const existing = await prisma.order.findUnique({
+    where: { id: params.id },
+    include: { items: true },
+  })
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  if (existing.shopId !== shopId) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+  // SUPER_ADMIN can manage orders for any shop
+  if (userRole !== 'SUPER_ADMIN' && existing.shopId !== shopId) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
 
   const body = await req.json()
   const data: any = {}
@@ -32,6 +40,18 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   if (body.rejectSlip) {
     data.paymentStatus = 'REJECTED'
     data.paymentSlipUrl = null
+  }
+
+  // คืนจำนวนเมนูเมื่อยกเลิกออเดอร์
+  if (body.status === 'CANCELLED' && existing.status !== 'CANCELLED') {
+    await prisma.$transaction(
+      existing.items.map(item =>
+        prisma.menuItem.updateMany({
+          where: { id: item.menuItemId, soldCount: { gte: item.quantity } },
+          data: { soldCount: { decrement: item.quantity } },
+        })
+      )
+    )
   }
 
   const order = await prisma.order.update({

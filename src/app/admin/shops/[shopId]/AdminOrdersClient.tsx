@@ -7,11 +7,10 @@ import { cn } from '@/lib/utils'
 import toast from 'react-hot-toast'
 
 const STATUS_TABS = [
-  { key: 'ALL',       label: 'ทั้งหมด'  },
-  { key: 'PENDING',   label: 'รอรับ'    },
-  { key: 'CONFIRMED', label: 'รับแล้ว'  },
-  { key: 'READY',     label: 'เสร็จแล้ว'},
-  { key: 'DELIVERED', label: 'ส่งแล้ว'  },
+  { key: 'ALL',       label: 'ทั้งหมด' },
+  { key: 'PENDING',   label: 'รอรับ'   },
+  { key: 'CONFIRMED', label: 'รับแล้ว' },
+  { key: 'DELIVERED', label: 'ส่งแล้ว' },
   { key: 'CANCELLED', label: 'ยกเลิก'  },
 ]
 const ACTIVE_STATUSES = ['PENDING', 'CONFIRMED']
