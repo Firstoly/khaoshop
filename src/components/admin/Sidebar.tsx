@@ -7,21 +7,33 @@ import { useSession } from 'next-auth/react'
 import { LayoutDashboard, UtensilsCrossed, ClipboardList, Settings, ChefHat, ExternalLink, Menu, X, BarChart2, AlertCircle, ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-const navItems = [
-  { href: '/dashboard',           icon: LayoutDashboard, label: 'แดชบอร์ด' },
-  { href: '/dashboard/menu',      icon: UtensilsCrossed, label: 'จัดการเมนู' },
-  { href: '/dashboard/orders',    icon: ClipboardList,   label: 'จัดการออเดอร์' },
-  { href: '/dashboard/debt',      icon: AlertCircle,     label: 'ลูกหนี้ค้างชำระ' },
-  { href: '/dashboard/analytics', icon: BarChart2,       label: 'รายงานยอดขาย' },
-  { href: '/dashboard/settings',  icon: Settings,        label: 'ตั้งค่าร้าน' },
+type Permissions = {
+  canMenu: boolean
+  canOrders: boolean
+  canDebt: boolean
+  canAnalytics: boolean
+  canSettings: boolean
+}
+
+const ALL_NAV = [
+  { href: '/dashboard',           icon: LayoutDashboard, label: 'แดชบอร์ด',        permKey: null          },
+  { href: '/dashboard/menu',      icon: UtensilsCrossed, label: 'จัดการเมนู',       permKey: 'canMenu'     },
+  { href: '/dashboard/orders',    icon: ClipboardList,   label: 'จัดการออเดอร์',    permKey: 'canOrders'   },
+  { href: '/dashboard/debt',      icon: AlertCircle,     label: 'ลูกหนี้ค้างชำระ', permKey: 'canDebt'     },
+  { href: '/dashboard/analytics', icon: BarChart2,       label: 'รายงานยอดขาย',    permKey: 'canAnalytics'},
+  { href: '/dashboard/settings',  icon: Settings,        label: 'ตั้งค่าร้าน',     permKey: 'canSettings' },
 ]
 
-export function Sidebar() {
+export function Sidebar({ permissions }: { permissions: Permissions }) {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
   const { data: session } = useSession()
 
-  const SidebarContent = () => {
+  const navItems = ALL_NAV.filter(item =>
+    item.permKey === null || permissions[item.permKey as keyof Permissions]
+  )
+
+  function SidebarContent() {
     const shopSlug = (session?.user as any)?.shopSlug as string | undefined
     return (
       <div className="flex flex-col h-full">

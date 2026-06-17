@@ -14,16 +14,27 @@ enum UserRole {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  name      String
-  role      UserRole @default(USER)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  shop      Shop?
-  accounts  Account[]
-  sessions  Session[]
+  id         String          @id @default(cuid())
+  email      String          @unique
+  password   String
+  name       String
+  role       UserRole        @default(USER)
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  shop       Shop?
+  accounts   Account[]
+  sessions   Session[]
+  permission UserPermission?
+}
+
+model UserPermission {
+  userId       String  @id
+  canMenu      Boolean @default(true)
+  canOrders    Boolean @default(true)
+  canDebt      Boolean @default(true)
+  canAnalytics Boolean @default(true)
+  canSettings  Boolean @default(true)
+  user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Account {

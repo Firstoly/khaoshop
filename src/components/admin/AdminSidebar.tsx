@@ -3,14 +3,15 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Users, Store, Menu, X, ShieldCheck, LogOut } from 'lucide-react'
+import { LayoutDashboard, Users, Store, Menu, X, ShieldCheck, LogOut, KeyRound } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { signOut } from 'next-auth/react'
 
 const navItems = [
-  { href: '/admin',       icon: LayoutDashboard, label: 'แดชบอร์ด' },
-  { href: '/admin/users', icon: Users,           label: 'จัดการผู้ใช้' },
-  { href: '/admin/shops', icon: Store,           label: 'จัดการร้านค้า' },
+  { href: '/admin',             icon: LayoutDashboard, label: 'แดชบอร์ด'     },
+  { href: '/admin/users',       icon: Users,           label: 'จัดการผู้ใช้'  },
+  { href: '/admin/shops',       icon: Store,           label: 'จัดการร้านค้า' },
+  { href: '/admin/permissions', icon: KeyRound,        label: 'กำหนดสิทธิ์'  },
 ]
 
 function SidebarContent({ onClose }: { onClose?: () => void }) {
