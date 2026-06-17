@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation'
 import { formatPrice } from '@/lib/utils'
 import { startOfDay, endOfDay } from 'date-fns'
 import Link from 'next/link'
-import { Store, ShoppingBag, Users, TrendingUp, ExternalLink, ChefHat, CheckCircle2, Clock, Package } from 'lucide-react'
+import { Store, ShoppingBag, Users, TrendingUp, CheckCircle2, Clock, Package, ExternalLink } from 'lucide-react'
 
 async function getAdminData() {
   const today = new Date()
@@ -59,25 +59,11 @@ export default async function AdminPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-100 px-6 py-4 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-violet-100 rounded-xl flex items-center justify-center">
-              <ChefHat className="w-5 h-5 text-violet-600" />
-            </div>
-            <div>
-              <h1 className="font-bold text-gray-900">Super Admin — KhaoShop</h1>
-              <p className="text-xs text-gray-400">ภาพรวมแพลตฟอร์มทั้งหมด</p>
-            </div>
-          </div>
-          <Link href="/dashboard" className="text-sm text-blue-500 hover:underline">
-            ← กลับ Dashboard ร้านฉัน
-          </Link>
-        </div>
-      </div>
-
       <div className="max-w-7xl mx-auto px-6 py-6 space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">แดชบอร์ด</h1>
+          <p className="text-sm text-gray-400 mt-1">ภาพรวมแพลตฟอร์มทั้งหมด</p>
+        </div>
 
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
