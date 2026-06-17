@@ -196,29 +196,36 @@ export function KitchenClient({ orders: initial, shopId }: { orders: Order[]; sh
             const total = group.slots.reduce((s, sl) => s + sl.quantity, 0)
             const doneSlotsCount = group.slots.filter(sl => checked.has(sl.key)).length
             const allDone = doneSlotsCount === group.slots.length
+            const pct = Math.round((doneSlotsCount / group.slots.length) * 100)
             return (
-              <div key={group.name} className={cn('card-base overflow-hidden transition-all duration-200', allDone && 'opacity-55')}>
-                {/* Menu header */}
-                <div className={cn('px-5 py-3.5 flex items-center justify-between border-b border-gray-50', allDone ? 'bg-emerald-50' : 'bg-gray-50/50')}>
-                  <div className="flex items-center gap-2.5">
-                    {allDone
-                      ? <span className="text-emerald-500 text-lg">✓</span>
-                      : <ChefHat className="w-4 h-4 text-brand-400" />
-                    }
-                    <span className={cn('font-display font-bold text-base', allDone ? 'text-emerald-700 line-through' : 'text-gray-900')}>
+              <div key={group.name} className={cn('card-base overflow-hidden transition-all duration-200', allDone && 'opacity-60')}>
+                {/* ── ชื่อเมนู (ด้านบน) ── */}
+                <div className={cn('px-5 pt-4 pb-3', allDone && 'bg-emerald-50')}>
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <h3 className={cn('font-display font-bold text-xl leading-tight',
+                      allDone ? 'text-emerald-700 line-through' : 'text-gray-900')}>
                       {group.name}
+                    </h3>
+                    <span className={cn('shrink-0 font-bold text-sm px-2.5 py-1 rounded-lg mt-0.5',
+                      allDone ? 'bg-emerald-100 text-emerald-700' : 'bg-brand-50 text-brand-600')}>
+                      {allDone ? '✓ เสร็จแล้ว' : `รวม ${total} จาน`}
                     </span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-gray-400">{doneSlotsCount}/{group.slots.length} คิว</span>
-                    <span className={cn('font-display font-bold text-sm px-2.5 py-1 rounded-lg',
-                      allDone ? 'bg-emerald-100 text-emerald-700' : 'bg-brand-50 text-brand-600')}>
-                      รวม {total} จาน
-                    </span>
+                  {/* progress bar */}
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className={cn('h-full rounded-full transition-all duration-300',
+                          allDone ? 'bg-emerald-500' : 'bg-brand-500')}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <span className="text-xs text-gray-400 shrink-0">{doneSlotsCount}/{group.slots.length} คิว</span>
                   </div>
                 </div>
-                {/* Per-order slots */}
-                <div className="divide-y divide-gray-50">
+
+                {/* ── รายการใครสั่ง (ด้านล่าง) ── */}
+                <div className="border-t border-gray-100 divide-y divide-gray-50">
                   {group.slots.map(slot => {
                     const done = checked.has(slot.key)
                     return (
@@ -229,13 +236,17 @@ export function KitchenClient({ orders: initial, shopId }: { orders: Order[]; sh
                       >
                         {done
                           ? <CheckSquare className="w-5 h-5 text-emerald-500 shrink-0" />
-                          : <Square className="w-5 h-5 text-gray-300 shrink-0 group-hover:text-brand-300" />
+                          : <Square className="w-5 h-5 text-gray-200 shrink-0 group-hover:text-brand-300" />
                         }
-                        <span className={cn('text-sm font-medium flex-1', done ? 'line-through text-gray-300' : 'text-gray-700')}>
-                          คิว <span className="font-bold text-gray-900">#{String(slot.queueNumber).padStart(3, '0')}</span>
-                          <span className="text-gray-400 ml-1">— {slot.customerName}</span>
-                        </span>
-                        <span className={cn('text-sm font-bold shrink-0 min-w-[2rem] text-right',
+                        <div className={cn('flex-1 min-w-0', done && 'opacity-40')}>
+                          <span className="text-xs font-bold text-gray-400 mr-1">
+                            #{String(slot.queueNumber).padStart(3, '0')}
+                          </span>
+                          <span className={cn('text-sm font-semibold', done ? 'line-through text-gray-400' : 'text-gray-800')}>
+                            {slot.customerName}
+                          </span>
+                        </div>
+                        <span className={cn('text-base font-black shrink-0',
                           done ? 'text-gray-300' : 'text-brand-500')}>
                           ×{slot.quantity}
                         </span>
