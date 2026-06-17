@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { formatPrice } from '@/lib/utils'
-import { startOfDay, endOfDay, format } from 'date-fns'
+import { startOfDay, endOfDay } from 'date-fns'
 import Link from 'next/link'
 import { Store, ShoppingBag, Users, TrendingUp, ExternalLink, ChefHat, CheckCircle2, Clock, Package } from 'lucide-react'
 
@@ -44,7 +44,7 @@ export default async function AdminPage() {
   const session = await getServerSession(authOptions)
   if (!session || (session.user as any).role !== 'SUPER_ADMIN') redirect('/dashboard')
 
-  const { shops, totalUsers, totalOrders, totalRevenue, recentOrders } = await getAdminData()
+  const { shops, totalUsers, totalRevenue, recentOrders } = await getAdminData()
 
   const todayOrdersAll = shops.reduce((s, sh) => s + sh.orders.length, 0)
   const todayRevAll = shops.reduce((s, sh) =>
