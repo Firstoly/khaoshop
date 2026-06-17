@@ -92,17 +92,27 @@ export function KitchenClient({ orders: initial, shopId }: { orders: Order[]; sh
     }
   }
 
-  // sort: incomplete menus first
-  const menuRows = Array.from(menuMap.entries())
-    .map(([name, slots]) => ({ name, slots }))
-    .sort((a, b) => {
-      const aDone = a.slots.every(s => checked.has(s.key))
-      const bDone = b.slots.every(s => checked.has(s.key))
-      return Number(aDone) - Number(bDone)
-    })
+  // column headers = menu names (incomplete first)
+  const menuNames = Array.from(menuMap.keys()).sort((a, b) => {
+    const aDone = (menuMap.get(a) ?? []).every(s => checked.has(s.key))
+    const bDone = (menuMap.get(b) ?? []).every(s => checked.has(s.key))
+    return Number(aDone) - Number(bDone)
+  })
 
-  const maxSlots = menuRows.reduce((m, r) => Math.max(m, r.slots.length), 0)
-  const totalMenuItems = menuRows.reduce((s, r) => s + r.slots.reduce((ss, sl) => ss + sl.quantity, 0), 0)
+  // rows = orders, each cell = slot for that order+menu combo
+  const orderRows = activeOrders.map(order => ({
+    order,
+    itemsByMenu: new Map(
+      order.items.map(item => [
+        item.menuItem.name,
+        { key: `${order.id}-${item.id}`, quantity: item.quantity },
+      ])
+    ),
+  }))
+
+  const totalMenuItems = Array.from(menuMap.values()).reduce(
+    (s, slots) => s + slots.reduce((ss, sl) => ss + sl.quantity, 0), 0
+  )
 
   return (
     <div className="max-w-6xl mx-auto space-y-5 animate-fade-in">
@@ -172,7 +182,7 @@ export function KitchenClient({ orders: initial, shopId }: { orders: Order[]; sh
       </div>
 
       {/* ══════════ ตาราง checklist ══════════ */}
-      {menuRows.length === 0 ? (
+      {menuNames.length === 0 ? (
         <div className="text-center py-16 text-gray-400">
           <ClipboardList className="w-14 h-14 mx-auto mb-3 opacity-20" />
           <p className="font-medium">ไม่มีออเดอร์ที่ต้องเตรียม</p>
@@ -183,58 +193,58 @@ export function KitchenClient({ orders: initial, shopId }: { orders: Order[]; sh
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr>
-                {/* Menu name column header */}
+                {/* คนที่สั่ง (sticky left) */}
                 <th className="px-5 py-3.5 text-left font-semibold text-gray-500 bg-gray-50 border-b border-gray-100 sticky left-0 z-10 min-w-[160px]">
                   <div className="flex items-center gap-2">
                     <ChefHat className="w-4 h-4 text-brand-400" />
-                    ชื่อเมนู
+                    คนที่สั่ง
                   </div>
                 </th>
-                {/* คนที่สั่ง columns */}
-                {Array.from({ length: maxSlots }).map((_, i) => (
-                  <th key={i} className="px-4 py-3.5 text-center font-semibold text-gray-400 bg-gray-50 border-b border-gray-100 min-w-[150px]">
-                    คนที่สั่ง {i + 1}
-                  </th>
-                ))}
+                {/* menu name columns */}
+                {menuNames.map(name => {
+                  const slots = menuMap.get(name) ?? []
+                  const allDone = slots.every(s => checked.has(s.key))
+                  const total = slots.reduce((s, sl) => s + sl.quantity, 0)
+                  return (
+                    <th key={name} className={cn(
+                      'px-4 py-3.5 text-center font-semibold bg-gray-50 border-b border-gray-100 min-w-[150px]',
+                      allDone ? 'text-emerald-500' : 'text-gray-700'
+                    )}>
+                      <div className={cn('font-display text-sm leading-tight', allDone && 'line-through')}>{name}</div>
+                      <div className={cn('text-[11px] font-normal mt-0.5', allDone ? 'text-emerald-400' : 'text-brand-400')}>
+                        รวม {total} จาน
+                      </div>
+                    </th>
+                  )
+                })}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {menuRows.map(row => {
-                const allDone = row.slots.every(s => checked.has(s.key))
-                const doneCnt = row.slots.filter(s => checked.has(s.key)).length
-                const rowTotal = row.slots.reduce((s, sl) => s + sl.quantity, 0)
+              {orderRows.map(({ order, itemsByMenu }) => {
+                const orderDone = isOrderDone(order)
                 return (
-                  <tr key={row.name} className={cn('transition-colors', allDone ? 'bg-emerald-50/60' : 'hover:bg-gray-50/50')}>
-                    {/* Menu name cell */}
+                  <tr key={order.id} className={cn('transition-colors', orderDone ? 'bg-emerald-50/60' : 'hover:bg-gray-50/50')}>
+                    {/* Customer row header */}
                     <td className={cn(
                       'px-5 py-4 sticky left-0 z-10 border-r border-gray-100',
-                      allDone ? 'bg-emerald-50' : 'bg-white'
+                      orderDone ? 'bg-emerald-50' : 'bg-white'
                     )}>
-                      <div className={cn('font-display font-bold text-base leading-tight', allDone && 'line-through text-emerald-600')}>
-                        {row.name}
-                      </div>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className={cn('text-xs font-semibold',
-                          allDone ? 'text-emerald-500' : 'text-brand-500')}>
-                          รวม {rowTotal} จาน
-                        </span>
-                        <span className="text-xs text-gray-300">·</span>
-                        <span className="text-xs text-gray-400">{doneCnt}/{row.slots.length}</span>
-                      </div>
+                      <p className={cn('font-bold text-sm leading-tight', orderDone && 'line-through text-emerald-600')}>
+                        #{String(order.queueNumber).padStart(3, '0')} {order.customerName}
+                      </p>
+                      {orderDone && (
+                        <span className="text-[10px] text-emerald-500 font-semibold">พร้อมเสิร์ฟ ✓</span>
+                      )}
                     </td>
-                    {/* Order cells */}
-                    {Array.from({ length: maxSlots }).map((_, i) => {
-                      const slot = row.slots[i]
+                    {/* Menu cells */}
+                    {menuNames.map(name => {
+                      const slot = itemsByMenu.get(name)
                       if (!slot) {
-                        return (
-                          <td key={i} className="px-4 py-4">
-                            <div className="w-full h-full min-h-[2rem]" />
-                          </td>
-                        )
+                        return <td key={name} className="px-4 py-4"><div className="min-h-[2rem]" /></td>
                       }
                       const done = checked.has(slot.key)
                       return (
-                        <td key={i} className="px-4 py-4">
+                        <td key={name} className="px-4 py-4">
                           <button
                             onClick={() => toggleCheck(slot.key)}
                             className={cn(
@@ -248,16 +258,9 @@ export function KitchenClient({ orders: initial, shopId }: { orders: Order[]; sh
                               ? <CheckSquare className="w-4 h-4 text-emerald-500 shrink-0" />
                               : <Square className="w-4 h-4 text-gray-300 shrink-0 group-hover:text-brand-400" />
                             }
-                            <div className={cn('min-w-0', done && 'opacity-50')}>
-                              <p className={cn('text-xs font-bold leading-tight',
-                                done ? 'text-emerald-600 line-through' : 'text-gray-800')}>
-                                #{String(slot.queueNumber).padStart(3, '0')} {slot.customerName}
-                              </p>
-                              <p className={cn('text-xs mt-0.5 font-semibold',
-                                done ? 'text-emerald-400' : 'text-brand-500')}>
-                                ×{slot.quantity} จาน
-                              </p>
-                            </div>
+                            <p className={cn('text-xs font-bold', done ? 'text-emerald-500 line-through' : 'text-brand-500')}>
+                              ×{slot.quantity} จาน
+                            </p>
                           </button>
                         </td>
                       )
