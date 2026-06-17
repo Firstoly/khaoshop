@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { formatPrice, formatDate, getOrderStatusLabel, ORDER_STATUS_FLOW } from '@/lib/utils'
-import { Search, ClipboardList, Phone, MapPin, ChevronRight, CheckCircle, Loader2, X, QrCode, Banknote, BadgeCheck, Wallet, XCircle } from 'lucide-react'
+import { Search, ClipboardList, Phone, MapPin, ChevronRight, CheckCircle, Loader2, X, QrCode, Banknote, BadgeCheck, Wallet, XCircle, RotateCcw } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { cn } from '@/lib/utils'
 import { getPusherClient, PUSHER_EVENTS, getShopChannel } from '@/lib/pusher'
@@ -289,6 +289,15 @@ export function OrdersClient({ orders: initial, shopId }: { orders: any[]; shopI
                         {getOrderStatusLabel(nextStatus).label}
                       </button>
                     )}
+                    {order.status === 'CANCELLED' && (
+                      <button
+                        onClick={e => { e.stopPropagation(); updateStatus(order, 'PENDING') }}
+                        disabled={isUpdating}
+                        className="mt-2 flex items-center gap-1 text-[10px] bg-emerald-500 text-white px-2.5 py-1 rounded-lg hover:bg-emerald-600 font-semibold">
+                        {isUpdating ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />}
+                        เรียกคืน
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -477,6 +486,19 @@ export function OrdersClient({ orders: initial, shopId }: { orders: any[]; shopI
                 </div>
               )}
 
+              {/* Restore button — แสดงเฉพาะตอน CANCELLED */}
+              {selected.status === 'CANCELLED' && (
+                <button
+                  onClick={() => updateStatus(selected, 'PENDING')}
+                  disabled={updating === selected.id}
+                  className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 transition-colors shadow-sm">
+                  {updating === selected.id
+                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                    : <RotateCcw className="w-4 h-4" />}
+                  เรียกคืนออเดอร์นี้
+                </button>
+              )}
+
               {/* Status */}
               <div>
                 <h3 className="font-semibold text-gray-800 mb-3 text-sm">อัปเดตสถานะออเดอร์</h3>
@@ -497,15 +519,14 @@ export function OrdersClient({ orders: initial, shopId }: { orders: any[]; shopI
                       </button>
                     )
                   })}
-                  <button
-                    onClick={() => updateStatus(selected, 'CANCELLED')}
-                    disabled={updating === selected.id}
-                    className={cn('py-2.5 px-3 rounded-xl text-xs font-semibold border transition-all col-span-2',
-                      selected.status === 'CANCELLED'
-                        ? 'bg-red-50 text-red-700 border-red-200'
-                        : 'bg-gray-50 text-gray-400 border-gray-100 hover:bg-red-50 hover:text-red-500 hover:border-red-200')}>
-                    ยกเลิกออเดอร์
-                  </button>
+                  {selected.status !== 'CANCELLED' && (
+                    <button
+                      onClick={() => updateStatus(selected, 'CANCELLED')}
+                      disabled={updating === selected.id}
+                      className="py-2.5 px-3 rounded-xl text-xs font-semibold border transition-all col-span-2 bg-gray-50 text-gray-400 border-gray-100 hover:bg-red-50 hover:text-red-500 hover:border-red-200">
+                      ยกเลิกออเดอร์
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

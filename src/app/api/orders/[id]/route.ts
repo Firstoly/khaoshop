@@ -54,6 +54,18 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     )
   }
 
+  // เรียกคืน soldCount เมื่อเรียกคืนออเดอร์ที่ยกเลิกแล้ว
+  if (existing.status === 'CANCELLED' && body.status && body.status !== 'CANCELLED') {
+    await prisma.$transaction(
+      existing.items.map(item =>
+        prisma.menuItem.update({
+          where: { id: item.menuItemId },
+          data: { soldCount: { increment: item.quantity } },
+        })
+      )
+    )
+  }
+
   const order = await prisma.order.update({
     where: { id: params.id },
     data,
