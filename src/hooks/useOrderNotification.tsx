@@ -92,13 +92,13 @@ export function useOrderNotification({ shopId, onNewOrder, enabled = true }: Use
     channelRef.current = channel
 
     channel.bind(PUSHER_EVENTS.NEW_ORDER, (data: NewOrderPayload) => {
-      startAlertSound()
-
-      // ไม่แสดง toast บนหน้าลูกค้า
+      // หน้าลูกค้า — ไม่เล่นเสียงและไม่แสดง popup
       if (pathnameRef.current.startsWith('/store/')) {
         if (onNewOrder) onNewOrder(data)
         return
       }
+
+      startAlertSound()
 
       toast.custom(
         (t) => (
