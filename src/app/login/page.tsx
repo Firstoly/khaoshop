@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { signIn } from 'next-auth/react'
+import { signIn, getSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Eye, EyeOff, Loader2, ChefHat } from 'lucide-react'
@@ -21,7 +21,12 @@ export default function LoginPage() {
       const res = await signIn('credentials', { email, password, redirect: false })
       if (res?.error) { toast.error(res.error); return }
       toast.success('เข้าสู่ระบบสำเร็จ!')
-      router.push('/dashboard')
+      const session = await getSession()
+      if ((session?.user as any)?.role === 'SUPER_ADMIN') {
+        router.push('/admin')
+      } else {
+        router.push('/dashboard')
+      }
       router.refresh()
     } catch { toast.error('เกิดข้อผิดพลาด') }
     finally { setLoading(false) }

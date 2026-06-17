@@ -11,6 +11,7 @@ export default async function DashboardLayout({
 }) {
   const session = await getServerSession(authOptions)
   if (!session) redirect('/login')
+  if ((session.user as any)?.role === 'SUPER_ADMIN') redirect('/admin')
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
