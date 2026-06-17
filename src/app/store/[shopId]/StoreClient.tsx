@@ -179,11 +179,11 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
               ข้อมูลผู้สั่ง
             </h2>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">ชื่อ-นามสกุล *</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">ชื่อ *</label>
               <input
                 value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
                 className="w-full px-4 py-4 bg-gray-50 rounded-2xl border border-gray-200 focus:outline-none focus:border-brand-400 text-base"
-                placeholder="กรอกชื่อ-นามสกุล" required
+                placeholder="กรอกชื่อจริง หรือ ชื่อเล่น" required
               />
             </div>
             <div>
@@ -201,7 +201,7 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
               <input
                 value={form.note} onChange={e => setForm({ ...form, note: e.target.value })}
                 className="w-full px-4 py-4 bg-gray-50 rounded-2xl border border-gray-200 focus:outline-none focus:border-brand-400 text-base"
-                placeholder="เช่น ไม่ใส่ผัก, เผ็ดน้อย"
+                placeholder="ไม่ระบุก็ได้"
               />
             </div>
           </div>
