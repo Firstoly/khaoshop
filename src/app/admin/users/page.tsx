@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { Users, ShieldCheck, Store, User } from 'lucide-react'
 import { RoleToggle } from './RoleToggle'
+import { CreateUserModal } from './CreateUserModal'
 
 async function getUsers() {
   return prisma.user.findMany({
@@ -20,9 +21,12 @@ export default async function UsersPage() {
   return (
     <div className="space-y-6 max-w-6xl mx-auto animate-fade-in">
       {/* Header */}
-      <div>
-        <h1 className="font-display text-2xl font-bold text-gray-900">จัดการผู้ใช้งาน</h1>
-        <p className="text-sm text-gray-400 mt-0.5">ผู้ใช้ทั้งหมด {users.length} บัญชี</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="font-display text-2xl font-bold text-gray-900">จัดการผู้ใช้งาน</h1>
+          <p className="text-sm text-gray-400 mt-0.5">ผู้ใช้ทั้งหมด {users.length} บัญชี</p>
+        </div>
+        <CreateUserModal />
       </div>
 
       {/* Stats */}
