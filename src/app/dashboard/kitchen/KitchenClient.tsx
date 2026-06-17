@@ -19,7 +19,7 @@ type Order = {
   status: string
   totalAmount: number
   items: OrderItem[]
-  createdAt: string
+  createdAt: Date | string
 }
 
 export function KitchenClient({ orders: initial, shopId }: { orders: Order[]; shopId: string }) {
