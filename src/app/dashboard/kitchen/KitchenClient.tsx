@@ -19,6 +19,8 @@ type Order = {
   status: string
   totalAmount: number
   note?: string | null
+  paymentStatus?: string | null
+  paymentMethod?: string | null
   items: OrderItem[]
   createdAt: Date | string
 }
@@ -216,7 +218,7 @@ export function KitchenClient({ orders: initial, shopId }: { orders: Order[]; sh
                   const allDone = slots.every(s => checked.has(s.key))
                   const total = slots.reduce((s, sl) => s + sl.quantity, 0)
                   return (
-                    <th key={name} className="px-3 py-4 border-b-2 border-gray-100 min-w-[140px] bg-gray-50">
+                    <th key={name} className="px-3 py-4 border-b-2 border-r border-gray-200 min-w-[110px] bg-gray-50">
                       <div className={cn(
                         'font-display font-bold text-base leading-tight text-center',
                         allDone ? 'text-emerald-400 line-through' : 'text-gray-800'
@@ -242,6 +244,8 @@ export function KitchenClient({ orders: initial, shopId }: { orders: Order[]; sh
               {orderRows.map(({ order, itemsByMenu }, rowIdx) => {
                 const orderDone = isOrderDone(order)
                 const note = hasNote(order.note) ? order.note!.trim() : null
+                const ps = order.paymentStatus
+                const pm = order.paymentMethod
                 return (
                   <tr
                     key={order.id}
@@ -272,6 +276,20 @@ export function KitchenClient({ orders: initial, shopId }: { orders: Order[]; sh
                           )}>
                             {order.customerName}
                           </p>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {ps === 'VERIFIED' && (
+                              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-md">✓ จ่ายแล้ว</span>
+                            )}
+                            {ps === 'PAID' && (
+                              <span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded-md">🧾 รอตรวจสลิป</span>
+                            )}
+                            {(ps === 'PENDING' || !ps) && pm === 'CASH' && (
+                              <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-md">💵 เงินสด</span>
+                            )}
+                            {(ps === 'PENDING' || !ps) && pm === 'PROMPTPAY' && (
+                              <span className="text-[10px] font-bold text-gray-500 bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded-md">ยังไม่โอน</span>
+                            )}
+                          </div>
                           {note && (
                             <div className="flex items-start gap-1 mt-1 bg-amber-50 border border-amber-100 rounded-lg px-2 py-1 max-w-[140px]">
                               <MessageSquare className="w-3 h-3 text-amber-500 shrink-0 mt-px" />
@@ -287,14 +305,14 @@ export function KitchenClient({ orders: initial, shopId }: { orders: Order[]; sh
                       const slot = itemsByMenu.get(name)
                       if (!slot) {
                         return (
-                          <td key={name} className="px-3 py-2 text-center text-gray-300 font-bold text-lg">
+                          <td key={name} className="px-3 py-2 text-center text-gray-300 font-bold text-lg border-r border-gray-100">
                             -
                           </td>
                         )
                       }
                       const done = checked.has(slot.key)
                       return (
-                        <td key={name} className="px-3 py-2">
+                        <td key={name} className="px-3 py-2 border-r border-gray-100">
                           <button
                             onClick={() => toggleCheck(slot.key)}
                             className={cn(
