@@ -1,13 +1,15 @@
 'use client'
 
-import { useState, useMemo, useRef } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import {
   ShoppingCart, Plus, Minus, X, Phone, UtensilsCrossed, ChefHat,
   CheckCircle, Loader2, Banknote, QrCode, Upload, StickyNote,
   ChevronLeft, Store,
 } from 'lucide-react'
 import { formatPrice, getStockStatus } from '@/lib/utils'
+import { getPusherClient, PUSHER_EVENTS, getShopChannel } from '@/lib/pusher'
 import toast from 'react-hot-toast'
 import { cn } from '@/lib/utils'
 
@@ -19,8 +21,20 @@ const CAT_EMOJI: Record<string, string> = {
 }
 
 export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }) {
+  const router = useRouter()
   const [cart, setCart] = useState<CartItem[]>([])
   const [catFilter, setCatFilter] = useState('ทั้งหมด')
+
+  // อัปเดต stock อัตโนมัติเมื่อมีออเดอร์เข้า
+  useEffect(() => {
+    const pusher = getPusherClient()
+    const channel = pusher.subscribe(getShopChannel(shop.id))
+    channel.bind(PUSHER_EVENTS.NEW_ORDER, () => { router.refresh() })
+    return () => {
+      channel.unbind_all()
+      pusher.unsubscribe(getShopChannel(shop.id))
+    }
+  }, [shop.id, router])
   const [step, setStep] = useState<'menu' | 'cart' | 'form' | 'done'>('menu')
   const [orderDone, setOrderDone] = useState<any>(null)
   const [loading, setLoading] = useState(false)
