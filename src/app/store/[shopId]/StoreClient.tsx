@@ -48,6 +48,12 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
       if (ex) return prev.map(c => c.menuItem.id === item.id ? { ...c, quantity: c.quantity + 1 } : c)
       return [...prev, { menuItem: item, quantity: 1 }]
     })
+    const newInCart = inCart + 1
+    if (stock.remaining - newInCart === 0) {
+      toast('นี่คือที่สุดท้ายแล้ว! 🔥', { icon: '⚠️' })
+    } else if (stock.remaining - newInCart <= 2) {
+      toast(`เหลืออีกแค่ ${stock.remaining - newInCart} ที่เท่านั้น`, { icon: '⚡' })
+    }
   }
 
   function removeFromCart(id: string) {
@@ -563,8 +569,13 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
                       <span className="bg-red-500 text-white text-xs font-bold px-3 py-1.5 rounded-full">หมดแล้ว</span>
                     </div>
                   )}
-                  {!soldOut && stock.remaining <= 5 && (
-                    <div className="absolute top-2 right-2 bg-amber-400 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                  {!soldOut && stock.remaining <= 3 && (
+                    <div className="absolute bottom-0 left-0 right-0 bg-red-500/90 text-white text-xs font-bold py-1.5 text-center animate-pulse">
+                      ⚠️ เหลือเพียง {stock.remaining} ที่เท่านั้น!
+                    </div>
+                  )}
+                  {!soldOut && stock.remaining > 3 && stock.remaining <= 10 && (
+                    <div className="absolute top-2 right-2 bg-amber-500 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow">
                       เหลือ {stock.remaining}
                     </div>
                   )}
