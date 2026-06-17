@@ -16,5 +16,5 @@ export default async function OrdersPage() {
     include: { items: { include: { menuItem: true } } },
   })
 
-  return <OrdersClient orders={orders} />
+  return <OrdersClient orders={orders} shopId={shopId} />
 }

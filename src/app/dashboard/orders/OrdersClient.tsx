@@ -1,10 +1,33 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { formatPrice, formatDate, getOrderStatusLabel, ORDER_STATUS_FLOW } from '@/lib/utils'
 import { Search, ClipboardList, Phone, MapPin, ChevronRight, CheckCircle, Loader2, X, QrCode, Banknote, BadgeCheck, Wallet, XCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { cn } from '@/lib/utils'
+import { getPusherClient, PUSHER_EVENTS, getShopChannel } from '@/lib/pusher'
+
+function playOrderSound() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+    const playTone = (freq: number, start: number, dur: number) => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.type = 'sine'
+      osc.frequency.value = freq
+      gain.gain.setValueAtTime(0, ctx.currentTime + start)
+      gain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + start + 0.01)
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur)
+      osc.start(ctx.currentTime + start)
+      osc.stop(ctx.currentTime + start + dur + 0.05)
+    }
+    playTone(880, 0, 0.15)
+    playTone(1100, 0.18, 0.15)
+    playTone(1320, 0.36, 0.25)
+  } catch {}
+}
 
 const STATUS_TABS = [
   { key: 'ALL',       label: 'ทั้งหมด' },
@@ -17,12 +40,37 @@ const STATUS_TABS = [
 
 const ACTIVE_STATUSES = ['PENDING', 'CONFIRMED']
 
-export function OrdersClient({ orders: initial }: { orders: any[] }) {
+export function OrdersClient({ orders: initial, shopId }: { orders: any[]; shopId: string }) {
   const [orders, setOrders] = useState(initial)
   const [tab, setTab] = useState('ALL')
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<any | null>(null)
   const [updating, setUpdating] = useState<string | null>(null)
+
+  useEffect(() => {
+    const pusher = getPusherClient()
+    const channel = pusher.subscribe(getShopChannel(shopId))
+
+    channel.bind(PUSHER_EVENTS.NEW_ORDER, async (data: any) => {
+      playOrderSound()
+      toast.success(`🔔 ออเดอร์ใหม่! #${String(data.queueNumber).padStart(3, '0')} — ${data.customerName}`, {
+        duration: 6000,
+        style: { fontWeight: '600' },
+      })
+      try {
+        const res = await fetch(`/api/orders/${data.orderId}`)
+        if (res.ok) {
+          const newOrder = await res.json()
+          setOrders(prev => [newOrder, ...prev])
+        }
+      } catch {}
+    })
+
+    return () => {
+      channel.unbind_all()
+      pusher.unsubscribe(getShopChannel(shopId))
+    }
+  }, [shopId])
 
   const filtered = orders.filter(o => {
     const matchTab = tab === 'ALL' ? ACTIVE_STATUSES.includes(o.status) : o.status === tab
