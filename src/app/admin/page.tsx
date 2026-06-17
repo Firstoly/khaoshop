@@ -113,7 +113,7 @@ export default async function AdminPage() {
                 .filter(o => o.paymentStatus === 'VERIFIED')
                 .reduce((s, o) => s + o.totalAmount, 0)
               const todayOrderCount = shop.orders.length
-              const categories = [...new Set(shop.menuItems.map(m => m.category).filter(Boolean))]
+              const categories = Array.from(new Set(shop.menuItems.map(m => m.category).filter((c): c is string => c !== null)))
               const availableMenus = shop.menuItems.filter(m => m.isAvailable).length
 
               return (
