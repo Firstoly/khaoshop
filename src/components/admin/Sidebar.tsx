@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useSession } from 'next-auth/react'
-import { LayoutDashboard, UtensilsCrossed, ClipboardList, Settings, ChefHat, ExternalLink, Menu, X, BarChart2, AlertCircle } from 'lucide-react'
+import { LayoutDashboard, UtensilsCrossed, ClipboardList, Settings, ChefHat, ExternalLink, Menu, X, BarChart2, AlertCircle, ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
@@ -59,7 +59,17 @@ export function Sidebar() {
           })}
         </nav>
 
-        <div className="p-4 border-t border-gray-100">
+        <div className="p-4 border-t border-gray-100 space-y-2">
+          {(session?.user as any)?.role === 'SUPER_ADMIN' && (
+            <Link
+              href="/admin"
+              onClick={() => setMobileOpen(false)}
+              className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-violet-50 hover:bg-violet-100 text-violet-700 font-medium text-sm transition-colors"
+            >
+              <ShieldCheck className="w-4 h-4" />
+              <span>Super Admin</span>
+            </Link>
+          )}
           <Link
             href={shopSlug ? `/store/${shopSlug}` : '#'}
             target="_blank"
