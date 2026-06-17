@@ -23,7 +23,7 @@ export function MenuClient({ menuItems: initial, shopId }: { menuItems: MenuItem
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState({
     name: '', description: '', price: '', dailyLimit: '20',
-    category: 'แกงและต้ม', imageUrl: '', isAvailable: true,
+    category: 'แกงและต้ม', customCategory: '', imageUrl: '', isAvailable: true,
   })
 
   const filtered = menuItems.filter(m => {
@@ -34,14 +34,18 @@ export function MenuClient({ menuItems: initial, shopId }: { menuItems: MenuItem
 
   function openAdd() {
     setEditing(null)
-    setForm({ name: '', description: '', price: '', dailyLimit: '20', category: 'แกงและต้ม', imageUrl: '', isAvailable: true })
+    setForm({ name: '', description: '', price: '', dailyLimit: '20', category: 'แกงและต้ม', customCategory: '', imageUrl: '', isAvailable: true })
     setShowModal(true)
   }
 
   function openEdit(item: MenuItem) {
     setEditing(item)
+    const cat = item.category ?? 'อื่นๆ'
+    const isKnown = CATEGORIES.includes(cat)
     setForm({ name: item.name, description: item.description ?? '', price: String(item.price),
-      dailyLimit: String(item.dailyLimit), category: item.category ?? 'อื่นๆ',
+      dailyLimit: String(item.dailyLimit),
+      category: isKnown ? cat : 'อื่นๆ',
+      customCategory: isKnown ? '' : cat,
       imageUrl: item.imageUrl ?? '', isAvailable: item.isAvailable })
     setShowModal(true)
   }
@@ -50,8 +54,9 @@ export function MenuClient({ menuItems: initial, shopId }: { menuItems: MenuItem
     e.preventDefault()
     setLoading(true)
     try {
+      const finalCategory = form.category === 'อื่นๆ' ? (form.customCategory.trim() || 'อื่นๆ') : form.category
       const body = { name: form.name, description: form.description, price: parseFloat(form.price),
-        dailyLimit: parseInt(form.dailyLimit), category: form.category,
+        dailyLimit: parseInt(form.dailyLimit), category: finalCategory,
         imageUrl: form.imageUrl || null, isAvailable: form.isAvailable, shopId }
       const url = editing ? `/api/menu/${editing.id}` : '/api/menu'
       const res = await fetch(url, { method: editing ? 'PUT' : 'POST',
@@ -260,9 +265,18 @@ export function MenuClient({ menuItems: initial, shopId }: { menuItems: MenuItem
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">หมวดหมู่</label>
-                <select value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} className="input-base">
+                <select value={form.category} onChange={e => setForm({ ...form, category: e.target.value, customCategory: '' })} className="input-base">
                   {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
+                {form.category === 'อื่นๆ' && (
+                  <input
+                    value={form.customCategory}
+                    onChange={e => setForm({ ...form, customCategory: e.target.value })}
+                    className="input-base mt-2"
+                    placeholder="ระบุหมวดหมู่ของคุณ..."
+                    autoFocus
+                  />
+                )}
               </div>
               <div className="flex items-center gap-3">
                 <button type="button" onClick={() => setForm({ ...form, isAvailable: !form.isAvailable })}
