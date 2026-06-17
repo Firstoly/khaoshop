@@ -78,14 +78,6 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-gray-100 text-center">
-            <p className="text-sm text-gray-500">
-              ยังไม่มีบัญชี?{' '}
-              <Link href="/register" className="text-brand-500 hover:text-brand-600 font-bold">
-                สมัครฟรีเลย →
-              </Link>
-            </p>
-          </div>
         </div>
         <p className="text-center text-xs text-gray-400 mt-6">© 2024 KhaoShop</p>
       </div>
