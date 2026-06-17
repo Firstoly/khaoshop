@@ -14,50 +14,43 @@ async function getUsers() {
 export default async function UsersPage() {
   const users = await getUsers()
   const admins  = users.filter(u => (u as any).role === 'SUPER_ADMIN').length
-  const sellers = users.filter(u => (u as any).role === 'USER' && u.shop).length
-  const regular = users.filter(u => (u as any).role === 'USER' && !u.shop).length
+  const sellers = users.filter(u => (u as any).role !== 'SUPER_ADMIN' && u.shop).length
+  const regular = users.filter(u => (u as any).role !== 'SUPER_ADMIN' && !u.shop).length
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
+    <div className="space-y-6 max-w-6xl mx-auto animate-fade-in">
+      {/* Header */}
       <div>
         <h1 className="font-display text-2xl font-bold text-gray-900">จัดการผู้ใช้งาน</h1>
         <p className="text-sm text-gray-400 mt-0.5">ผู้ใช้ทั้งหมด {users.length} บัญชี</p>
       </div>
 
-      {/* Summary cards */}
+      {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
-        <div className="card-base p-5">
-          <div className="w-10 h-10 bg-violet-50 rounded-xl flex items-center justify-center mb-3">
-            <ShieldCheck className="w-5 h-5 text-violet-600" />
+        {[
+          { label: 'Super Admin', value: admins,  icon: ShieldCheck, bg: 'bg-violet-50', text: 'text-violet-600' },
+          { label: 'เจ้าของร้าน', value: sellers, icon: Store,       bg: 'bg-orange-50', text: 'text-orange-500' },
+          { label: 'ผู้ใช้ทั่วไป', value: regular, icon: User,        bg: 'bg-blue-50',   text: 'text-blue-500'  },
+        ].map(s => (
+          <div key={s.label} className="card-base p-5 animate-fade-in">
+            <div className={`w-10 h-10 rounded-xl ${s.bg} flex items-center justify-center mb-3`}>
+              <s.icon className={`w-5 h-5 ${s.text}`} />
+            </div>
+            <p className="font-display text-2xl font-bold text-gray-900">{s.value}</p>
+            <p className="text-xs text-gray-400 mt-1">{s.label}</p>
           </div>
-          <p className="font-display text-2xl font-bold text-gray-900">{admins}</p>
-          <p className="text-xs text-gray-400 mt-1">Super Admin</p>
-        </div>
-        <div className="card-base p-5">
-          <div className="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center mb-3">
-            <Store className="w-5 h-5 text-orange-500" />
-          </div>
-          <p className="font-display text-2xl font-bold text-gray-900">{sellers}</p>
-          <p className="text-xs text-gray-400 mt-1">เจ้าของร้าน</p>
-        </div>
-        <div className="card-base p-5">
-          <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center mb-3">
-            <User className="w-5 h-5 text-blue-500" />
-          </div>
-          <p className="font-display text-2xl font-bold text-gray-900">{regular}</p>
-          <p className="text-xs text-gray-400 mt-1">ผู้ใช้ทั่วไป</p>
-        </div>
+        ))}
       </div>
 
       {/* Table */}
-      <div className="card-base overflow-hidden">
+      <div className="card-base overflow-hidden animate-fade-in">
         <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
           <Users className="w-5 h-5 text-gray-400" />
           <h2 className="font-display font-bold text-gray-900">รายชื่อผู้ใช้ทั้งหมด</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-gray-500 text-xs">
+            <thead className="bg-gray-50 text-xs text-gray-500">
               <tr>
                 <th className="text-left px-6 py-3 font-semibold">ชื่อ / Email</th>
                 <th className="text-left px-6 py-3 font-semibold">ร้านค้า</th>
@@ -90,7 +83,7 @@ export default async function UsersPage() {
                     {new Date(user.createdAt).toLocaleDateString('th-TH')}
                   </td>
                   <td className="px-6 py-4 text-center">
-                    <RoleToggle userId={user.id} currentRole={(user as any).role} userName={user.name} />
+                    <RoleToggle userId={user.id} currentRole={(user as any).role ?? 'USER'} userName={user.name} />
                   </td>
                 </tr>
               ))}

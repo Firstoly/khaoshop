@@ -84,6 +84,15 @@
   .section-title {
     @apply font-display font-bold text-gray-900;
   }
+
+  .admin-sidebar-active {
+    @apply bg-violet-500 text-white;
+    box-shadow: 0 4px 14px rgba(139, 92, 246, 0.35);
+  }
+
+  .admin-sidebar-inactive {
+    @apply text-gray-600 hover:bg-violet-50 hover:text-violet-700;
+  }
 }
 
 /* Scrollbar */

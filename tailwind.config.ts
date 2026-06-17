@@ -53,6 +53,7 @@ module.exports = {
         'card': '0 2px 8px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04)',
         'card-hover': '0 8px 24px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.06)',
         'brand': '0 4px 14px rgba(249, 115, 22, 0.3)',
+        'admin': '0 4px 14px rgba(139, 92, 246, 0.35)',
       }
     },
   },

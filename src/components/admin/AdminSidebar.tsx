@@ -18,10 +18,10 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Logo */}
+      {/* Logo — same structure as seller sidebar */}
       <div className="p-5 border-b border-gray-100">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-violet-700 rounded-xl flex items-center justify-center shadow-lg shadow-violet-200">
+          <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-violet-700 rounded-xl flex items-center justify-center shadow-admin">
             <ShieldCheck className="w-5 h-5 text-white" />
           </div>
           <div>
@@ -42,9 +42,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
               onClick={onClose}
               className={cn(
                 'sidebar-item',
-                active
-                  ? 'bg-violet-500 text-white shadow-lg shadow-violet-200'
-                  : 'text-gray-600 hover:bg-violet-50 hover:text-violet-700'
+                active ? 'admin-sidebar-active' : 'admin-sidebar-inactive'
               )}
             >
               <item.icon className="w-5 h-5 flex-shrink-0" />
@@ -55,14 +53,14 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
         })}
       </nav>
 
-      {/* Logout */}
+      {/* Bottom */}
       <div className="p-4 border-t border-gray-100">
         <button
           onClick={() => signOut({ callbackUrl: '/login' })}
-          className="w-full flex items-center gap-2.5 px-4 py-3 rounded-xl text-red-500 hover:bg-red-50 font-medium text-sm transition-colors"
+          className="w-full flex items-center gap-2.5 px-4 py-3 rounded-xl text-red-500 hover:bg-red-50 font-medium text-sm transition-all duration-200"
         >
           <LogOut className="w-4 h-4" />
-          ออกจากระบบ
+          <span>ออกจากระบบ</span>
         </button>
       </div>
     </div>
