@@ -76,15 +76,18 @@ export function KitchenClient({ orders: initial, shopId }: { orders: Order[]; sh
   const totalItems = orders.reduce((s, o) => s + o.items.reduce((ss, i) => ss + i.quantity, 0), 0)
   const checkedItems = checked.size
   const visibleOrders = hideCompleted ? orders.filter(o => !isOrderDone(o)) : orders
+  const progressPct = totalItems > 0 ? Math.round((checkedItems / totalItems) * 100) : 0
 
   // aggregate by menu item name
-  const menuMap = new Map<string, { name: string; slots: Array<{ key: string; queueNumber: number; customerName: string; quantity: number }> }>()
+  const menuMap = new Map<string, { name: string; total: number; slots: Array<{ key: string; queueNumber: number; customerName: string; quantity: number }> }>()
   for (const order of orders) {
     if (hideCompleted && isOrderDone(order)) continue
     for (const item of order.items) {
       const name = item.menuItem.name
-      if (!menuMap.has(name)) menuMap.set(name, { name, slots: [] })
-      menuMap.get(name)!.slots.push({
+      if (!menuMap.has(name)) menuMap.set(name, { name, total: 0, slots: [] })
+      const g = menuMap.get(name)!
+      g.total += item.quantity
+      g.slots.push({
         key: `${order.id}-${item.id}`,
         queueNumber: order.queueNumber,
         customerName: order.customerName,
@@ -98,8 +101,6 @@ export function KitchenClient({ orders: initial, shopId }: { orders: Order[]; sh
     return Number(aDone) - Number(bDone)
   })
 
-  const progressPct = totalItems > 0 ? Math.round((checkedItems / totalItems) * 100) : 0
-
   return (
     <div className="max-w-4xl mx-auto space-y-5 animate-fade-in">
       {/* Header */}
@@ -112,9 +113,7 @@ export function KitchenClient({ orders: initial, shopId }: { orders: Order[]; sh
           onClick={() => setHideCompleted(!hideCompleted)}
           className={cn(
             'flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-colors',
-            hideCompleted
-              ? 'bg-brand-500 text-white shadow-brand'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            hideCompleted ? 'bg-brand-500 text-white shadow-brand' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
           )}
         >
           {hideCompleted ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
@@ -122,23 +121,56 @@ export function KitchenClient({ orders: initial, shopId }: { orders: Order[]; sh
         </button>
       </div>
 
-      {/* Progress bar */}
-      {totalItems > 0 && (
-        <div className="card-base p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-semibold text-gray-700">ความคืบหน้า</span>
-            <span className="text-sm font-bold text-brand-500">{checkedItems} / {totalItems} รายการ ({progressPct}%)</span>
+      {/* ══════════ เมนูทั้งหมดที่ต้องเตรียมวันนี้ (บนสุด) ══════════ */}
+      {menuGroups.length > 0 && (
+        <div className="card-base p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <ChefHat className="w-4 h-4 text-brand-400" />
+              <span className="font-semibold text-sm text-gray-700">เมนูที่ต้องเตรียมวันนี้</span>
+            </div>
+            <span className="text-xs text-gray-400">{menuGroups.length} เมนู</span>
           </div>
-          <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-            <div
-              className={cn('h-full rounded-full transition-all duration-500',
-                progressPct === 100 ? 'bg-emerald-500' : 'bg-brand-500'
+          <div className="flex flex-wrap gap-2">
+            {menuGroups.map(group => {
+              const allDone = group.slots.every(s => checked.has(s.key))
+              return (
+                <div key={group.name}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold border transition-all',
+                    allDone
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200 line-through opacity-60'
+                      : 'bg-orange-50 text-orange-700 border-orange-200'
+                  )}>
+                  {allDone && <span className="text-emerald-500">✓</span>}
+                  {group.name}
+                  <span className={cn('text-xs font-bold px-1.5 py-0.5 rounded-full',
+                    allDone ? 'bg-emerald-100 text-emerald-600' : 'bg-orange-100 text-orange-600')}>
+                    ×{group.total}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* overall progress bar */}
+          {totalItems > 0 && (
+            <div className="mt-4 pt-3 border-t border-gray-100">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs text-gray-400">ความคืบหน้ารวม</span>
+                <span className="text-xs font-bold text-brand-500">{checkedItems}/{totalItems} รายการ ({progressPct}%)</span>
+              </div>
+              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className={cn('h-full rounded-full transition-all duration-500',
+                    progressPct === 100 ? 'bg-emerald-500' : 'bg-brand-500')}
+                  style={{ width: `${progressPct}%` }}
+                />
+              </div>
+              {progressPct === 100 && (
+                <p className="text-xs text-emerald-600 font-semibold mt-2 text-center">✅ เสร็จทุกรายการแล้ว!</p>
               )}
-              style={{ width: `${progressPct}%` }}
-            />
-          </div>
-          {progressPct === 100 && (
-            <p className="text-xs text-emerald-600 font-semibold mt-2 text-center">✅ เสร็จทุกรายการแล้ว!</p>
+            </div>
           )}
         </div>
       )}
@@ -187,45 +219,37 @@ export function KitchenClient({ orders: initial, shopId }: { orders: Order[]; sh
         )}
       </div>
 
-      {/* ==================== แยกตามเมนู ==================== */}
+      {/* ══════════ แยกตามเมนู ══════════ */}
       {tab === 'menu' && (
         <div className="space-y-3">
           {menuGroups.length === 0 ? (
             <EmptyState />
           ) : menuGroups.map(group => {
-            const total = group.slots.reduce((s, sl) => s + sl.quantity, 0)
             const doneSlotsCount = group.slots.filter(sl => checked.has(sl.key)).length
             const allDone = doneSlotsCount === group.slots.length
-            const pct = Math.round((doneSlotsCount / group.slots.length) * 100)
             return (
-              <div key={group.name} className={cn('card-base overflow-hidden transition-all duration-200', allDone && 'opacity-60')}>
-                {/* ── ชื่อเมนู (ด้านบน) ── */}
-                <div className={cn('px-5 pt-4 pb-3', allDone && 'bg-emerald-50')}>
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <h3 className={cn('font-display font-bold text-xl leading-tight',
-                      allDone ? 'text-emerald-700 line-through' : 'text-gray-900')}>
+              <div key={group.name} className={cn('card-base overflow-hidden transition-all duration-200', allDone && 'opacity-55')}>
+                {/* Menu name header */}
+                <div className={cn('px-5 py-3.5 flex items-center justify-between border-b border-gray-50', allDone ? 'bg-emerald-50' : 'bg-gray-50/50')}>
+                  <div className="flex items-center gap-2.5">
+                    {allDone
+                      ? <span className="text-emerald-500 text-lg">✓</span>
+                      : <ChefHat className="w-4 h-4 text-brand-400" />
+                    }
+                    <span className={cn('font-display font-bold text-base', allDone ? 'text-emerald-700 line-through' : 'text-gray-900')}>
                       {group.name}
-                    </h3>
-                    <span className={cn('shrink-0 font-bold text-sm px-2.5 py-1 rounded-lg mt-0.5',
-                      allDone ? 'bg-emerald-100 text-emerald-700' : 'bg-brand-50 text-brand-600')}>
-                      {allDone ? '✓ เสร็จแล้ว' : `รวม ${total} จาน`}
                     </span>
                   </div>
-                  {/* progress bar */}
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className={cn('h-full rounded-full transition-all duration-300',
-                          allDone ? 'bg-emerald-500' : 'bg-brand-500')}
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                    <span className="text-xs text-gray-400 shrink-0">{doneSlotsCount}/{group.slots.length} คิว</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-gray-400">{doneSlotsCount}/{group.slots.length} คิว</span>
+                    <span className={cn('font-display font-bold text-sm px-2.5 py-1 rounded-lg',
+                      allDone ? 'bg-emerald-100 text-emerald-700' : 'bg-brand-50 text-brand-600')}>
+                      รวม {group.total} จาน
+                    </span>
                   </div>
                 </div>
-
-                {/* ── รายการใครสั่ง (ด้านล่าง) ── */}
-                <div className="border-t border-gray-100 divide-y divide-gray-50">
+                {/* Order rows */}
+                <div className="divide-y divide-gray-50">
                   {group.slots.map(slot => {
                     const done = checked.has(slot.key)
                     return (
@@ -236,17 +260,13 @@ export function KitchenClient({ orders: initial, shopId }: { orders: Order[]; sh
                       >
                         {done
                           ? <CheckSquare className="w-5 h-5 text-emerald-500 shrink-0" />
-                          : <Square className="w-5 h-5 text-gray-200 shrink-0 group-hover:text-brand-300" />
+                          : <Square className="w-5 h-5 text-gray-300 shrink-0 group-hover:text-brand-300" />
                         }
-                        <div className={cn('flex-1 min-w-0', done && 'opacity-40')}>
-                          <span className="text-xs font-bold text-gray-400 mr-1">
-                            #{String(slot.queueNumber).padStart(3, '0')}
-                          </span>
-                          <span className={cn('text-sm font-semibold', done ? 'line-through text-gray-400' : 'text-gray-800')}>
-                            {slot.customerName}
-                          </span>
-                        </div>
-                        <span className={cn('text-base font-black shrink-0',
+                        <span className={cn('text-sm flex-1', done ? 'line-through text-gray-300' : 'text-gray-700')}>
+                          คิว <span className="font-bold text-gray-900">#{String(slot.queueNumber).padStart(3, '0')}</span>
+                          <span className="text-gray-400 ml-1">— {slot.customerName}</span>
+                        </span>
+                        <span className={cn('text-sm font-bold shrink-0',
                           done ? 'text-gray-300' : 'text-brand-500')}>
                           ×{slot.quantity}
                         </span>
@@ -260,7 +280,7 @@ export function KitchenClient({ orders: initial, shopId }: { orders: Order[]; sh
         </div>
       )}
 
-      {/* ==================== แยกตามออเดอร์ ==================== */}
+      {/* ══════════ แยกตามออเดอร์ ══════════ */}
       {tab === 'order' && (
         <div className="space-y-3">
           {visibleOrders.length === 0 ? (
@@ -270,7 +290,6 @@ export function KitchenClient({ orders: initial, shopId }: { orders: Order[]; sh
             const st = getOrderStatusLabel(order.status)
             return (
               <div key={order.id} className={cn('card-base overflow-hidden transition-all duration-200', done && 'opacity-55')}>
-                {/* Order header */}
                 <div className={cn('px-5 py-3.5 flex items-center justify-between border-b border-gray-50', done ? 'bg-emerald-50' : 'bg-gray-50/50')}>
                   <div className="flex items-center gap-3">
                     <div className={cn('w-11 h-11 rounded-xl flex items-center justify-center shrink-0 shadow-sm text-white text-xs font-black',
@@ -282,9 +301,7 @@ export function KitchenClient({ orders: initial, shopId }: { orders: Order[]; sh
                         <span className="font-display font-bold text-gray-900">{order.customerName}</span>
                         <span className={`status-badge text-[10px] ${st.bg} ${st.color}`}>{st.label}</span>
                         {done && (
-                          <span className="status-badge text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200">
-                            พร้อมเสิร์ฟ!
-                          </span>
+                          <span className="status-badge text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200">พร้อมเสิร์ฟ!</span>
                         )}
                       </div>
                       <p className="text-xs text-gray-400 mt-0.5">
@@ -294,20 +311,15 @@ export function KitchenClient({ orders: initial, shopId }: { orders: Order[]; sh
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => checkAllOrder(order)}
-                      className={cn('text-xs px-3 py-1.5 rounded-lg font-medium transition-colors',
-                        done
-                          ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
-                          : 'bg-brand-50 text-brand-600 hover:bg-brand-100'
-                      )}
-                    >
-                      {done ? 'ยกเลิก' : 'เสร็จทั้งหมด'}
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => checkAllOrder(order)}
+                    className={cn('text-xs px-3 py-1.5 rounded-lg font-medium transition-colors',
+                      done ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : 'bg-brand-50 text-brand-600 hover:bg-brand-100'
+                    )}
+                  >
+                    {done ? 'ยกเลิก' : 'เสร็จทั้งหมด'}
+                  </button>
                 </div>
-                {/* Items */}
                 <div className="divide-y divide-gray-50">
                   {order.items.map(item => {
                     const key = `${order.id}-${item.id}`
@@ -328,7 +340,7 @@ export function KitchenClient({ orders: initial, shopId }: { orders: Order[]; sh
                             <span className="text-xs text-gray-400 ml-1.5">({item.menuItem.category})</span>
                           )}
                         </span>
-                        <span className={cn('text-sm font-bold shrink-0 min-w-[2rem] text-right',
+                        <span className={cn('text-sm font-bold shrink-0',
                           itemDone ? 'text-gray-300' : 'text-brand-500')}>
                           ×{item.quantity}
                         </span>
