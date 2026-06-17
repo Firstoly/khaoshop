@@ -7,6 +7,7 @@ import { ExternalLink, Store, TrendingUp, ShoppingBag, UtensilsCrossed, ChevronR
 async function getShops() {
   const today = new Date()
   return prisma.shop.findMany({
+    where: { user: { role: 'USER' } },
     include: {
       user: { select: { name: true, email: true } },
       menuItems: {
