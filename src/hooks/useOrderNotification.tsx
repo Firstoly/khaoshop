@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { getPusherClient, PUSHER_EVENTS, getShopChannel } from '@/lib/pusher'
 import toast from 'react-hot-toast'
 
@@ -57,8 +57,12 @@ export function stopAlertSound() {
 
 export function useOrderNotification({ shopId, onNewOrder, enabled = true }: UseOrderNotificationOptions) {
   const router = useRouter()
+  const pathname = usePathname()
+  const pathnameRef = useRef(pathname)
   const channelRef = useRef<any>(null)
   const audioUnlockedRef = useRef(false)
+
+  useEffect(() => { pathnameRef.current = pathname }, [pathname])
 
   const unlockAudio = useCallback(() => {
     if (!audioUnlockedRef.current) {
@@ -89,6 +93,12 @@ export function useOrderNotification({ shopId, onNewOrder, enabled = true }: Use
 
     channel.bind(PUSHER_EVENTS.NEW_ORDER, (data: NewOrderPayload) => {
       startAlertSound()
+
+      // ไม่แสดง toast บนหน้าลูกค้า
+      if (pathnameRef.current.startsWith('/store/')) {
+        if (onNewOrder) onNewOrder(data)
+        return
+      }
 
       toast.custom(
         (t) => (
