@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useSession } from 'next-auth/react'
-import { LayoutDashboard, UtensilsCrossed, ClipboardList, Settings, ChefHat, ExternalLink, Menu, X, BarChart2, AlertCircle, ShieldCheck } from 'lucide-react'
+import { LayoutDashboard, UtensilsCrossed, ClipboardList, Settings, ChefHat, ExternalLink, Menu, X, BarChart2, AlertCircle, ShieldCheck, ListChecks } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 type Permissions = {
@@ -19,6 +19,7 @@ const ALL_NAV = [
   { href: '/dashboard',           icon: LayoutDashboard, label: 'แดชบอร์ด',        permKey: null          },
   { href: '/dashboard/menu',      icon: UtensilsCrossed, label: 'จัดการเมนู',       permKey: 'canMenu'     },
   { href: '/dashboard/orders',    icon: ClipboardList,   label: 'จัดการออเดอร์',    permKey: 'canOrders'   },
+  { href: '/dashboard/kitchen',   icon: ListChecks,      label: 'เตรียมอาหาร',       permKey: 'canOrders'   },
   { href: '/dashboard/debt',      icon: AlertCircle,     label: 'ลูกหนี้ค้างชำระ', permKey: 'canDebt'     },
   { href: '/dashboard/analytics', icon: BarChart2,       label: 'รายงานยอดขาย',    permKey: 'canAnalytics'},
   { href: '/dashboard/settings',  icon: Settings,        label: 'ตั้งค่าร้าน',     permKey: 'canSettings' },
