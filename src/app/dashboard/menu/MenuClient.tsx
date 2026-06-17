@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Search, UtensilsCrossed, X, Loader2 } from 'lucide-react'
+import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Search, UtensilsCrossed, X, Loader2, PackageX, RotateCcw } from 'lucide-react'
 import { formatPrice, getStockStatus } from '@/lib/utils'
 import { ImageUpload } from '@/components/ui/ImageUpload'
 import toast from 'react-hot-toast'
@@ -85,6 +85,24 @@ export function MenuClient({ menuItems: initial, shopId }: { menuItems: MenuItem
     if (!confirm('ลบเมนูนี้?')) return
     const res = await fetch(`/api/menu/${id}`, { method: 'DELETE' })
     if (res.ok) { setMenuItems(prev => prev.filter(m => m.id !== id)); toast.success('ลบเมนูแล้ว') }
+  }
+
+  async function markSoldOut(item: MenuItem) {
+    const res = await fetch(`/api/menu/${item.id}/soldout`, { method: 'POST' })
+    if (res.ok) {
+      const updated = await res.json()
+      setMenuItems(prev => prev.map(m => m.id === item.id ? updated : m))
+      toast.success('ทำเครื่องหมายว่าหมดแล้ว')
+    }
+  }
+
+  async function resetStock(item: MenuItem) {
+    const res = await fetch(`/api/menu/${item.id}/reset`, { method: 'POST' })
+    if (res.ok) {
+      const updated = await res.json()
+      setMenuItems(prev => prev.map(m => m.id === item.id ? updated : m))
+      toast.success('รีเซ็ตสต็อกแล้ว')
+    }
   }
 
   return (
@@ -183,6 +201,17 @@ export function MenuClient({ menuItems: initial, shopId }: { menuItems: MenuItem
                       {item.isAvailable ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
                       {item.isAvailable ? 'เปิดอยู่' : 'ปิดอยู่'}
                     </button>
+                    {stock.remaining > 0 ? (
+                      <button onClick={() => markSoldOut(item)} title="ทำเครื่องหมายหมดแล้ว"
+                        className="w-9 h-9 rounded-lg bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 flex items-center justify-center transition-colors">
+                        <PackageX className="w-3.5 h-3.5" />
+                      </button>
+                    ) : (
+                      <button onClick={() => resetStock(item)} title="รีเซ็ตสต็อก"
+                        className="w-9 h-9 rounded-lg bg-amber-50 text-amber-500 hover:bg-amber-100 flex items-center justify-center transition-colors">
+                        <RotateCcw className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                     <button onClick={() => openEdit(item)} className="w-9 h-9 rounded-lg bg-blue-50 text-blue-500 hover:bg-blue-100 flex items-center justify-center">
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
