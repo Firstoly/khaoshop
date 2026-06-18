@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { Sidebar } from '@/components/admin/Sidebar'
 import { Topbar } from '@/components/admin/Topbar'
+import { PushManager } from '@/components/PushManager'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions)
@@ -30,6 +31,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <Sidebar permissions={perms} showKitchen={shop?.showKitchen ?? true} />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Topbar session={session} />
+        <PushManager />
         <main className="flex-1 overflow-y-auto p-4 md:p-6">
           {children}
         </main>

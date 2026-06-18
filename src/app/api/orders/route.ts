@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { pusherServer, PUSHER_EVENTS, getShopChannel } from '@/lib/pusher'
+import { sendPushToUser } from '@/lib/webpush'
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
@@ -79,8 +80,26 @@ export async function POST(req: NextRequest) {
         }
       )
     } catch (pusherErr) {
-      // Don't fail order if pusher fails
       console.error('Pusher error:', pusherErr)
+    }
+
+    // 🔔 Web Push notification
+    try {
+      const shop = await prisma.shop.findUnique({ where: { id: shopId }, select: { userId: true, name: true } })
+      if (shop) {
+        const subs = await prisma.pushSubscription.findMany({ where: { userId: shop.userId } })
+        if (subs.length > 0) {
+          const itemNames = order.items.map((i: any) => `${i.menuItem.name} ×${i.quantity}`).join(', ')
+          await sendPushToUser(subs, {
+            title: `🛎️ ออเดอร์ใหม่ #${String(order.queueNumber).padStart(3, '0')} — ${order.customerName}`,
+            body: itemNames,
+            url: '/dashboard/orders',
+            tag: `order-${order.id}`,
+          })
+        }
+      }
+    } catch (pushErr) {
+      console.error('Push error:', pushErr)
     }
 
     return NextResponse.json(order, { status: 201 })
