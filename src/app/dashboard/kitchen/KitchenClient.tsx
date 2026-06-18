@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { CheckSquare, Square, ClipboardList, ChefHat, RefreshCw, Eye, EyeOff, MessageSquare } from 'lucide-react'
+import { CheckSquare, Square, ClipboardList, ChefHat, RefreshCw, Eye, EyeOff, MessageSquare, LayoutGrid, Table2 } from 'lucide-react'
 import { cn, getOrderStatusLabel } from '@/lib/utils'
 import { getPusherClient, PUSHER_EVENTS, getShopChannel } from '@/lib/pusher'
 
@@ -36,6 +36,7 @@ export function KitchenClient({ orders: initial, shopId }: { orders: Order[]; sh
   const [orders, setOrders] = useState<Order[]>(initial)
   const [checked, setChecked] = useState<Set<string>>(new Set())
   const [hideCompleted, setHideCompleted] = useState(false)
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table')
 
   useEffect(() => {
     const pusher = getPusherClient()
@@ -135,25 +136,32 @@ export function KitchenClient({ orders: initial, shopId }: { orders: Order[]; sh
         </div>
         <div className="flex items-center gap-2">
           {checkedItems > 0 && (
-            <button
-              onClick={() => setChecked(new Set())}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs text-gray-400 hover:text-red-500 transition-colors rounded-xl hover:bg-red-50"
-            >
+            <button onClick={() => setChecked(new Set())}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs text-gray-400 hover:text-red-500 transition-colors rounded-xl hover:bg-red-50">
               <RefreshCw className="w-3.5 h-3.5" />
               รีเซ็ต
             </button>
           )}
-          <button
-            onClick={() => setHideCompleted(!hideCompleted)}
-            className={cn(
-              'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all',
-              hideCompleted
-                ? 'bg-brand-500 text-white shadow-brand'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            )}
-          >
+          {/* Toggle view */}
+          <div className="flex rounded-xl overflow-hidden border border-gray-200 bg-white">
+            <button onClick={() => setViewMode('table')}
+              className={cn('flex items-center gap-1.5 px-3 py-2 text-xs font-semibold transition-colors',
+                viewMode === 'table' ? 'bg-brand-500 text-white' : 'text-gray-500 hover:bg-gray-50')}>
+              <Table2 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">ตาราง</span>
+            </button>
+            <button onClick={() => setViewMode('cards')}
+              className={cn('flex items-center gap-1.5 px-3 py-2 text-xs font-semibold transition-colors',
+                viewMode === 'cards' ? 'bg-brand-500 text-white' : 'text-gray-500 hover:bg-gray-50')}>
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">สรุป</span>
+            </button>
+          </div>
+          <button onClick={() => setHideCompleted(!hideCompleted)}
+            className={cn('flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all',
+              hideCompleted ? 'bg-brand-500 text-white shadow-brand' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>
             {hideCompleted ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-            {hideCompleted ? 'แสดงทั้งหมด' : 'ซ่อนที่เสร็จแล้ว'}
+            <span className="hidden sm:inline">{hideCompleted ? 'แสดงทั้งหมด' : 'ซ่อนที่เสร็จแล้ว'}</span>
           </button>
         </div>
       </div>
@@ -194,45 +202,91 @@ export function KitchenClient({ orders: initial, shopId }: { orders: Order[]; sh
         </div>
       )}
 
-      {/* ── ตาราง checklist ── */}
+      {/* ── Main view ── */}
       {menuNames.length === 0 ? (
         <div className="text-center py-20 text-gray-400">
           <ClipboardList className="w-14 h-14 mx-auto mb-3 opacity-20" />
           <p className="font-medium">ไม่มีออเดอร์ที่ต้องเตรียม</p>
           <p className="text-sm mt-1 text-gray-300">เมื่อมีออเดอร์ใหม่จะแสดงที่นี่อัตโนมัติ</p>
         </div>
+      ) : viewMode === 'cards' ? (
+        /* ── Card / Summary view ── */
+        <div className="space-y-3">
+          {menuNames.map(name => {
+            const slots = menuMap.get(name) ?? []
+            const allDone = slots.every(s => checked.has(s.key))
+            const total = slots.reduce((s, sl) => s + sl.quantity, 0)
+            return (
+              <div key={name} className={cn('card-base overflow-hidden', allDone && 'opacity-60')}>
+                {/* Card header */}
+                <div className={cn('px-4 py-3 border-b border-gray-100 flex items-center justify-between',
+                  allDone ? 'bg-emerald-50' : 'bg-orange-50')}>
+                  <div>
+                    <p className={cn('font-display font-bold text-lg leading-tight',
+                      allDone ? 'text-emerald-500 line-through' : 'text-gray-900')}>
+                      {name}
+                    </p>
+                    <p className={cn('text-sm font-bold mt-0.5',
+                      allDone ? 'text-emerald-400' : 'text-brand-500')}>
+                      รวม {total} จาน
+                    </p>
+                  </div>
+                  {allDone && (
+                    <span className="text-xs font-bold text-emerald-600 bg-emerald-100 px-2.5 py-1 rounded-full">เสร็จแล้ว</span>
+                  )}
+                </div>
+                {/* Per-customer rows */}
+                <div className="divide-y divide-gray-50">
+                  {slots.map(slot => {
+                    const done = checked.has(slot.key)
+                    return (
+                      <button key={slot.key} onClick={() => toggleCheck(slot.key)}
+                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left group">
+                        {done
+                          ? <CheckSquare className="w-5 h-5 text-emerald-400 shrink-0" />
+                          : <Square className="w-5 h-5 text-gray-300 shrink-0 group-hover:text-brand-400" />
+                        }
+                        <span className={cn('flex-1 font-medium text-sm',
+                          done ? 'line-through text-gray-300' : 'text-gray-800')}>
+                          #{String(slot.queueNumber).padStart(3, '0')} {slot.customerName}
+                        </span>
+                        <span className={cn('text-lg font-black shrink-0',
+                          done ? 'text-gray-200' : 'text-brand-500')}>
+                          ×{slot.quantity}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
+        </div>
       ) : (
+        /* ── Table view ── */
         <div className="card-base overflow-x-auto">
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="bg-gray-50">
-                {/* Left header: ลูกค้า */}
                 <th className="px-4 py-4 text-left font-semibold text-gray-500 border-b-2 border-gray-100 sticky left-0 bg-gray-50 z-10 min-w-[180px]">
                   <div className="flex items-center gap-2">
                     <ChefHat className="w-4 h-4 text-brand-400" />
                     <span>ลูกค้า</span>
                   </div>
                 </th>
-                {/* Menu name column headers */}
                 {menuNames.map(name => {
                   const slots = menuMap.get(name) ?? []
                   const allDone = slots.every(s => checked.has(s.key))
                   const total = slots.reduce((s, sl) => s + sl.quantity, 0)
                   return (
                     <th key={name} className="px-3 py-4 border-b-2 border-r border-gray-200 min-w-[110px] bg-gray-50">
-                      <div className={cn(
-                        'font-display font-bold text-base leading-tight text-center',
-                        allDone ? 'text-emerald-400 line-through' : 'text-gray-800'
-                      )}>
+                      <div className={cn('font-display font-bold text-base leading-tight text-center',
+                        allDone ? 'text-emerald-400 line-through' : 'text-gray-800')}>
                         {name}
                       </div>
                       <div className="flex justify-center mt-1.5">
-                        <span className={cn(
-                          'text-sm font-bold px-2.5 py-0.5 rounded-full',
-                          allDone
-                            ? 'bg-emerald-50 text-emerald-500'
-                            : 'bg-brand-50 text-brand-500'
-                        )}>
+                        <span className={cn('text-sm font-bold px-2.5 py-0.5 rounded-full',
+                          allDone ? 'bg-emerald-50 text-emerald-500' : 'bg-brand-50 text-brand-500')}>
                           รวม {total} จาน
                         </span>
                       </div>
@@ -248,33 +302,20 @@ export function KitchenClient({ orders: initial, shopId }: { orders: Order[]; sh
                 const ps = order.paymentStatus
                 const pm = order.paymentMethod
                 return (
-                  <tr
-                    key={order.id}
-                    className={cn(
-                      'transition-colors border-b border-gray-50 last:border-0',
+                  <tr key={order.id}
+                    className={cn('transition-colors border-b border-gray-50 last:border-0',
                       rowIdx % 2 === 0 ? '' : 'bg-gray-50/30',
-                      orderDone && 'bg-emerald-50/40'
-                    )}
-                  >
-                    {/* Customer row header */}
-                    <td className={cn(
-                      'px-4 py-3 sticky left-0 z-10 border-r-2 border-gray-100',
-                      orderDone ? 'bg-emerald-50' : rowIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'
-                    )}>
+                      orderDone && 'bg-emerald-50/40')}>
+                    <td className={cn('px-4 py-3 sticky left-0 z-10 border-r-2 border-gray-100',
+                      orderDone ? 'bg-emerald-50' : rowIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50/30')}>
                       <div className="flex items-center gap-3">
-                        <div className={cn(
-                          'w-10 h-10 rounded-xl flex items-center justify-center shrink-0 font-black text-xs leading-tight text-center',
-                          orderDone
-                            ? 'bg-emerald-100 text-emerald-600'
-                            : 'bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-brand'
-                        )}>
+                        <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center shrink-0 font-black text-xs leading-tight text-center',
+                          orderDone ? 'bg-emerald-100 text-emerald-600' : 'bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-brand')}>
                           {orderDone ? '✓' : `#${String(order.queueNumber).padStart(3, '0')}`}
                         </div>
                         <div className="min-w-0">
-                          <p className={cn(
-                            'font-bold text-sm leading-tight',
-                            orderDone ? 'line-through text-emerald-600' : 'text-gray-900'
-                          )}>
+                          <p className={cn('font-bold text-sm leading-tight',
+                            orderDone ? 'line-through text-emerald-600' : 'text-gray-900')}>
                             {order.customerName}
                           </p>
                           <div className="flex flex-wrap gap-1 mt-1">
@@ -300,44 +341,29 @@ export function KitchenClient({ orders: initial, shopId }: { orders: Order[]; sh
                         </div>
                       </div>
                     </td>
-
-                    {/* Menu cells */}
                     {menuNames.map(name => {
                       const slot = itemsByMenu.get(name)
                       if (!slot) {
                         return (
-                          <td key={name} className="px-3 py-2 text-center text-gray-300 font-bold text-lg border-r border-gray-100">
-                            -
-                          </td>
+                          <td key={name} className="px-3 py-2 text-center text-gray-300 font-bold text-lg border-r border-gray-100">-</td>
                         )
                       }
                       const done = checked.has(slot.key)
                       return (
                         <td key={name} className="px-3 py-2 border-r border-gray-100">
-                          <button
-                            onClick={() => toggleCheck(slot.key)}
-                            className={cn(
-                              'w-full h-10 rounded-xl border-2 transition-all flex items-center gap-2 px-3 group',
-                              done
-                                ? 'bg-emerald-50 border-emerald-200'
-                                : 'bg-white border-gray-200 hover:border-brand-400 hover:bg-orange-50 shadow-sm hover:shadow'
-                            )}
-                          >
+                          <button onClick={() => toggleCheck(slot.key)}
+                            className={cn('w-full h-10 rounded-xl border-2 transition-all flex items-center gap-2 px-3 group',
+                              done ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-gray-200 hover:border-brand-400 hover:bg-orange-50 shadow-sm hover:shadow')}>
                             {done
                               ? <CheckSquare className="w-4 h-4 text-emerald-400 shrink-0" />
                               : <Square className="w-4 h-4 text-gray-300 shrink-0 group-hover:text-brand-400" />
                             }
                             <div className="flex items-baseline gap-1">
-                              <span className={cn(
-                                'text-xl font-black leading-none',
-                                done ? 'text-emerald-300 line-through decoration-emerald-300' : 'text-brand-500'
-                              )}>
+                              <span className={cn('text-xl font-black leading-none',
+                                done ? 'text-emerald-300 line-through decoration-emerald-300' : 'text-brand-500')}>
                                 {slot.quantity}
                               </span>
-                              <span className={cn(
-                                'text-xs font-semibold',
-                                done ? 'text-emerald-300' : 'text-gray-400'
-                              )}>
+                              <span className={cn('text-xs font-semibold', done ? 'text-emerald-300' : 'text-gray-400')}>
                                 จาน
                               </span>
                             </div>
