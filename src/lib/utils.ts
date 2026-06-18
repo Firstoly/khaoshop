@@ -20,6 +20,13 @@ export function formatDate(date: Date | string): string {
   }).format(new Date(date))
 }
 
+export function formatDateWithDay(date: Date | string): string {
+  const d = new Date(date)
+  const day = new Intl.DateTimeFormat('th-TH', { weekday: 'long' }).format(d)
+  const rest = new Intl.DateTimeFormat('th-TH', { dateStyle: 'medium', timeStyle: 'short' }).format(d)
+  return `${day} ${rest}`
+}
+
 export function generateQueueNumber(orderCount: number): string {
   return String(orderCount + 1).padStart(3, '0')
 }

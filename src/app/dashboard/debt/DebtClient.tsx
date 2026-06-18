@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { formatPrice, formatDate } from '@/lib/utils'
+import { formatPrice, formatDateWithDay } from '@/lib/utils'
 import { Phone, Wallet, CheckCircle, Loader2, X, MapPin, Search, TrendingDown, ChevronDown, ChevronUp } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { cn } from '@/lib/utils'
@@ -199,7 +199,7 @@ export function DebtClient({ orders: initial, totalDebt: initialTotal }: { order
                             <p className="text-xs text-gray-500 truncate">
                               {order.items.map((i: any) => `${i.menuItem.name} ×${i.quantity}`).join(' · ')}
                             </p>
-                            <p className="text-[10px] text-gray-400 mt-0.5">{formatDate(order.createdAt)}{daysDiff >= 3 && ` · ค้าง ${daysDiff} วัน`}</p>
+                            <p className="text-[10px] text-gray-400 mt-0.5">{formatDateWithDay(order.createdAt)}{daysDiff >= 3 && ` · ค้าง ${daysDiff} วัน`}</p>
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
                             <span className="font-bold text-red-500 text-sm">{formatPrice(order.totalAmount)}</span>
@@ -232,7 +232,7 @@ export function DebtClient({ orders: initial, totalDebt: initialTotal }: { order
                 <h2 className="font-display text-lg font-bold text-gray-900">
                   ออเดอร์ #{String(selectedOrder.queueNumber).padStart(3, '0')}
                 </h2>
-                <p className="text-xs text-gray-400">{formatDate(selectedOrder.createdAt)}</p>
+                <p className="text-xs text-gray-400">{formatDateWithDay(selectedOrder.createdAt)}</p>
               </div>
               <button onClick={() => setSelectedOrder(null)} className="w-8 h-8 bg-gray-100 rounded-xl flex items-center justify-center">
                 <X className="w-4 h-4" />

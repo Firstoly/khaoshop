@@ -13,6 +13,7 @@ type Permissions = {
   canDebt: boolean
   canAnalytics: boolean
   canSettings: boolean
+  showKitchen?: boolean
 }
 
 const ALL_NAV = [
@@ -25,14 +26,15 @@ const ALL_NAV = [
   { href: '/dashboard/settings',  icon: Settings,        label: 'ตั้งค่าร้าน',     permKey: 'canSettings' },
 ]
 
-export function Sidebar({ permissions }: { permissions: Permissions }) {
+export function Sidebar({ permissions, showKitchen = true }: { permissions: Permissions; showKitchen?: boolean }) {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
   const { data: session } = useSession()
 
-  const navItems = ALL_NAV.filter(item =>
-    item.permKey === null || permissions[item.permKey as keyof Permissions]
-  )
+  const navItems = ALL_NAV.filter(item => {
+    if (item.href === '/dashboard/kitchen' && !showKitchen) return false
+    return item.permKey === null || permissions[item.permKey as keyof Permissions]
+  })
 
   function SidebarContent() {
     const shopSlug = (session?.user as any)?.shopSlug as string | undefined

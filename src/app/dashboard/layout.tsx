@@ -11,9 +11,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if ((session.user as any)?.role === 'SUPER_ADMIN') redirect('/admin')
 
   const userId = (session.user as any)?.id
-  const permission = userId
-    ? await prisma.userPermission.findUnique({ where: { userId } })
-    : null
+  const [permission, shop] = await Promise.all([
+    userId ? prisma.userPermission.findUnique({ where: { userId } }) : null,
+    userId ? prisma.shop.findUnique({ where: { userId }, select: { showKitchen: true } }) : null,
+  ])
 
   const perms = {
     canMenu:      permission?.canMenu      ?? true,
@@ -25,7 +26,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
-      <Sidebar permissions={perms} />
+      <Sidebar permissions={perms} showKitchen={shop?.showKitchen ?? true} />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Topbar session={session} />
         <main className="flex-1 overflow-y-auto p-4 md:p-6">
