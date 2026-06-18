@@ -1,9 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Bell, X } from 'lucide-react'
+import { Bell, X, BellOff } from 'lucide-react'
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
+const DISMISSED_KEY = 'push_banner_dismissed'
 
 function urlBase64ToUint8Array(base64String: string) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
@@ -30,57 +31,83 @@ async function subscribeAndSave() {
 }
 
 export function PushManager() {
-  const [status, setStatus] = useState<'unknown' | 'banner' | 'granted' | 'denied' | 'unsupported'>('unknown')
+  const [show, setShow] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [msg, setMsg] = useState('')
 
   useEffect(() => {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-      setStatus('unsupported'); return
-    }
-    const perm = Notification.permission
-    if (perm === 'granted') {
-      // Already granted — just register silently
+    // ถ้าเคย dismiss หรือ granted แล้ว ไม่ต้องแสดง
+    if (localStorage.getItem(DISMISSED_KEY)) return
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      // already granted — subscribe silently
       subscribeAndSave().catch(() => {})
-      setStatus('granted')
-    } else if (perm === 'denied') {
-      setStatus('denied')
-    } else {
-      setStatus('banner')
+      return
     }
+    if (typeof Notification !== 'undefined' && Notification.permission === 'denied') return
+    setShow(true)
   }, [])
 
   async function handleEnable() {
-    const perm = await Notification.requestPermission()
-    if (perm === 'granted') {
-      try { await subscribeAndSave() } catch (e) { console.error(e) }
-      setStatus('granted')
-    } else {
-      setStatus('denied')
+    setLoading(true)
+    setMsg('')
+    try {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        // iOS: ต้องเพิ่มเป็น icon บนหน้าจอก่อน
+        setMsg('กรุณากด "เพิ่มไปยังหน้าจอโฮม" ก่อนแล้วเปิดเว็บจาก icon นั้น')
+        setLoading(false)
+        return
+      }
+      const perm = await Notification.requestPermission()
+      if (perm === 'granted') {
+        await subscribeAndSave()
+        localStorage.setItem(DISMISSED_KEY, '1')
+        setShow(false)
+      } else {
+        setMsg('กรุณาอนุญาตการแจ้งเตือนใน settings ของ browser')
+      }
+    } catch (e) {
+      setMsg('เกิดข้อผิดพลาด ลองใหม่อีกครั้ง')
     }
+    setLoading(false)
   }
 
-  if (status !== 'banner') return null
+  function handleDismiss() {
+    localStorage.setItem(DISMISSED_KEY, '1')
+    setShow(false)
+  }
+
+  if (!show) return null
 
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-sm">
-      <div className="bg-gray-900 text-white rounded-2xl shadow-2xl px-4 py-3 flex items-center gap-3">
-        <div className="w-9 h-9 bg-brand-500 rounded-xl flex items-center justify-center shrink-0">
-          <Bell className="w-4 h-4 text-white" />
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[9999] w-[calc(100%-2rem)] max-w-sm">
+      <div className="bg-gray-900 text-white rounded-2xl shadow-2xl px-4 py-3 space-y-2">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 bg-brand-500 rounded-xl flex items-center justify-center shrink-0">
+            <Bell className="w-4 h-4 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold">เปิดการแจ้งเตือนออเดอร์</p>
+            <p className="text-xs text-gray-400">รับแจ้งเตือนแม้ไม่ได้อยู่หน้านี้</p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={handleEnable}
+              disabled={loading}
+              className="bg-brand-500 hover:bg-brand-600 disabled:opacity-60 text-white text-xs font-bold px-3 py-1.5 rounded-xl transition-colors"
+            >
+              {loading ? '...' : 'เปิด'}
+            </button>
+            <button onClick={handleDismiss} className="text-gray-400 hover:text-white p-1">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold">เปิดการแจ้งเตือนออเดอร์</p>
-          <p className="text-xs text-gray-400">รับแจ้งเตือนแม้ไม่ได้อยู่หน้านี้</p>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={handleEnable}
-            className="bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold px-3 py-1.5 rounded-xl transition-colors"
-          >
-            เปิด
-          </button>
-          <button onClick={() => setStatus('granted')} className="text-gray-400 hover:text-white">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+        {msg && (
+          <div className="flex items-start gap-2 bg-amber-500/20 rounded-xl px-3 py-2">
+            <BellOff className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+            <p className="text-xs text-amber-300">{msg}</p>
+          </div>
+        )}
       </div>
     </div>
   )
