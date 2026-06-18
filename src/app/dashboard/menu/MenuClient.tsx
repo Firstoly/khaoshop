@@ -4,6 +4,15 @@ import { useState, useEffect, useRef } from 'react'
 import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Search, UtensilsCrossed, X, Loader2, PackageX, RotateCcw, Tag } from 'lucide-react'
 
 const OPTION_STORAGE_KEY = 'khaoshop_option_history'
+const CATEGORY_STORAGE_KEY = 'khaoshop_category_history'
+
+function loadCategoryHistory(): string[] {
+  try { return JSON.parse(localStorage.getItem(CATEGORY_STORAGE_KEY) ?? '[]') } catch { return [] }
+}
+function saveCategoryToHistory(cat: string) {
+  const prev = loadCategoryHistory()
+  if (!prev.includes(cat)) localStorage.setItem(CATEGORY_STORAGE_KEY, JSON.stringify([cat, ...prev].slice(0, 20)))
+}
 const DEFAULT_OPTIONS = ['ปั่น', 'ไม่ปั่น', 'เย็น', 'ร้อน']
 
 function loadOptionHistory(): string[] {
@@ -46,9 +55,12 @@ export function MenuClient({ menuItems: initial, shopId, showMenuOptions = true 
   const [showSuggestions, setShowSuggestions] = useState(false)
   const optionInputRef = useRef<HTMLInputElement>(null)
   const suggestionsRef = useRef<HTMLDivElement>(null)
+  const [categoryHistory, setCategoryHistory] = useState<string[]>([])
+  const [showCatSuggestions, setShowCatSuggestions] = useState(false)
 
   useEffect(() => {
     setOptionHistory(loadOptionHistory())
+    setCategoryHistory(loadCategoryHistory())
   }, [showModal])
 
   const filtered = menuItems.filter(m => {
@@ -96,6 +108,10 @@ export function MenuClient({ menuItems: initial, shopId, showMenuOptions = true 
     setLoading(true)
     try {
       const finalCategory = form.category === 'อื่นๆ' ? (form.customCategory.trim() || 'อื่นๆ') : form.category
+      if (form.category === 'อื่นๆ' && form.customCategory.trim()) {
+        saveCategoryToHistory(form.customCategory.trim())
+        setCategoryHistory(loadCategoryHistory())
+      }
       const body = { name: form.name, description: form.description, price: parseFloat(form.price),
         dailyLimit: parseInt(form.dailyLimit), category: finalCategory,
         imageUrl: form.imageUrl || null, isAvailable: form.isAvailable, options: form.options, shopId }
@@ -310,13 +326,32 @@ export function MenuClient({ menuItems: initial, shopId, showMenuOptions = true 
                   {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
                 {form.category === 'อื่นๆ' && (
-                  <input
-                    value={form.customCategory}
-                    onChange={e => setForm({ ...form, customCategory: e.target.value })}
-                    className="input-base mt-2"
-                    placeholder="ระบุหมวดหมู่ของคุณ..."
-                    autoFocus
-                  />
+                  <div className="relative mt-2">
+                    <input
+                      value={form.customCategory}
+                      onChange={e => { setForm({ ...form, customCategory: e.target.value }); setShowCatSuggestions(true) }}
+                      onFocus={() => setShowCatSuggestions(true)}
+                      onBlur={() => setTimeout(() => setShowCatSuggestions(false), 150)}
+                      className="input-base w-full"
+                      placeholder="ระบุหมวดหมู่ของคุณ..."
+                      autoFocus
+                    />
+                    {showCatSuggestions && (() => {
+                      const q = form.customCategory.trim().toLowerCase()
+                      const hits = categoryHistory.filter(h => q === '' || h.toLowerCase().includes(q))
+                      return hits.length > 0 ? (
+                        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-10 overflow-hidden">
+                          {hits.map(h => (
+                            <button key={h} type="button"
+                              onMouseDown={() => { setForm(f => ({ ...f, customCategory: h })); setShowCatSuggestions(false) }}
+                              className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-700 transition-colors">
+                              {h}
+                            </button>
+                          ))}
+                        </div>
+                      ) : null
+                    })()}
+                  </div>
                 )}
               </div>
               {/* Options (ปั่น / ไม่ปั่น / เย็น / ร้อน ฯลฯ) */}
