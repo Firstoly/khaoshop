@@ -72,7 +72,8 @@ model Shop {
   phone         String?
   address       String?
   isOpen        Boolean    @default(true)
-  showKitchen   Boolean    @default(true)
+  showKitchen     Boolean    @default(true)
+  showMenuOptions Boolean    @default(true)
   promptpayId   String?
   promptpayName String?
   qrCodeUrl     String?

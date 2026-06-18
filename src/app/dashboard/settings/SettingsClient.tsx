@@ -9,6 +9,7 @@ export function SettingsClient({ shop }: { shop: any }) {
   const [form, setForm] = useState({
     name: shop.name, description: shop.description ?? '', phone: shop.phone ?? '',
     address: shop.address ?? '', isOpen: shop.isOpen, showKitchen: shop.showKitchen ?? true,
+    showMenuOptions: shop.showMenuOptions ?? true,
     logoUrl: shop.logoUrl ?? '',
     promptpayId: shop.promptpayId ?? '', promptpayName: shop.promptpayName ?? '',
     qrCodeUrl: shop.qrCodeUrl ?? '',
@@ -111,6 +112,17 @@ export function SettingsClient({ shop }: { shop: any }) {
             <button type="button" onClick={() => setForm({...form, showKitchen: !form.showKitchen})}
               className={`relative inline-flex h-7 w-14 rounded-full transition-colors ${form.showKitchen ? 'bg-brand-500' : 'bg-gray-200'}`}>
               <span className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform mt-1 ${form.showKitchen ? 'translate-x-8' : 'translate-x-1'}`} />
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-semibold text-gray-800">เปิดใช้ตัวเลือกเมนู (ปั่น/ไม่ปั่น ฯลฯ)</p>
+              <p className="text-xs text-gray-400 mt-0.5">ให้ลูกค้าเลือกตัวเลือกก่อนสั่ง เหมาะสำหรับร้านน้ำ</p>
+            </div>
+            <button type="button" onClick={() => setForm({...form, showMenuOptions: !form.showMenuOptions})}
+              className={`relative inline-flex h-7 w-14 rounded-full transition-colors ${form.showMenuOptions ? 'bg-brand-500' : 'bg-gray-200'}`}>
+              <span className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform mt-1 ${form.showMenuOptions ? 'translate-x-8' : 'translate-x-1'}`} />
             </button>
           </div>
 

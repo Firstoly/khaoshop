@@ -16,6 +16,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       address: body.address || null,
       isOpen: body.isOpen,
       showKitchen: body.showKitchen ?? true,
+      showMenuOptions: body.showMenuOptions ?? true,
       logoUrl: body.logoUrl || null,
       promptpayId: body.promptpayId || null,
       promptpayName: body.promptpayName || null,

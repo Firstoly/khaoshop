@@ -9,10 +9,10 @@ export default async function MenuPage() {
   if (!session) redirect('/login')
   const shopId = (session.user as any).shopId
 
-  const menuItems = await prisma.menuItem.findMany({
-    where: { shopId },
-    orderBy: { createdAt: 'desc' },
-  })
+  const [menuItems, shop] = await Promise.all([
+    prisma.menuItem.findMany({ where: { shopId }, orderBy: { createdAt: 'desc' } }),
+    prisma.shop.findUnique({ where: { id: shopId }, select: { showMenuOptions: true } }),
+  ])
 
-  return <MenuClient menuItems={menuItems} shopId={shopId} />
+  return <MenuClient menuItems={menuItems} shopId={shopId} showMenuOptions={shop?.showMenuOptions ?? true} />
 }

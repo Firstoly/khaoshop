@@ -29,7 +29,7 @@ interface MenuItem {
   isAvailable: boolean; category?: string | null; options: string[]
 }
 
-export function MenuClient({ menuItems: initial, shopId }: { menuItems: MenuItem[]; shopId: string }) {
+export function MenuClient({ menuItems: initial, shopId, showMenuOptions = true }: { menuItems: MenuItem[]; shopId: string; showMenuOptions?: boolean }) {
   const [menuItems, setMenuItems] = useState<MenuItem[]>(initial)
   const [search, setSearch] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('ทั้งหมด')
@@ -320,6 +320,7 @@ export function MenuClient({ menuItems: initial, shopId }: { menuItems: MenuItem
                 )}
               </div>
               {/* Options (ปั่น / ไม่ปั่น / เย็น / ร้อน ฯลฯ) */}
+              {showMenuOptions && (
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                   <Tag className="w-3.5 h-3.5 inline mr-1 text-gray-400" />
@@ -374,6 +375,7 @@ export function MenuClient({ menuItems: initial, shopId }: { menuItems: MenuItem
                 )}
                 <p className="text-[11px] text-gray-400 mt-1">ลูกค้าจะต้องเลือก 1 ตัวเลือกก่อนสั่ง</p>
               </div>
+              )}
 
               <div className="flex items-center gap-3">
                 <button type="button" onClick={() => setForm({ ...form, isAvailable: !form.isAvailable })}
