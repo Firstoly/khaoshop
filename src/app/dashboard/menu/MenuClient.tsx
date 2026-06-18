@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Search, UtensilsCrossed, X, Loader2, PackageX, RotateCcw } from 'lucide-react'
+import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Search, UtensilsCrossed, X, Loader2, PackageX, RotateCcw, Tag } from 'lucide-react'
 import { formatPrice, getStockStatus } from '@/lib/utils'
 import { ImageUpload } from '@/components/ui/ImageUpload'
 import toast from 'react-hot-toast'
@@ -11,7 +11,7 @@ const CATEGORIES = ['แกงและต้ม', 'ผัด', 'ทอดแล
 interface MenuItem {
   id: string; name: string; description?: string | null; price: number
   imageUrl?: string | null; dailyLimit: number; soldCount: number
-  isAvailable: boolean; category?: string | null
+  isAvailable: boolean; category?: string | null; options: string[]
 }
 
 export function MenuClient({ menuItems: initial, shopId }: { menuItems: MenuItem[]; shopId: string }) {
@@ -24,7 +24,9 @@ export function MenuClient({ menuItems: initial, shopId }: { menuItems: MenuItem
   const [form, setForm] = useState({
     name: '', description: '', price: '', dailyLimit: '20',
     category: 'แกงและต้ม', customCategory: '', imageUrl: '', isAvailable: true,
+    options: [] as string[],
   })
+  const [optionInput, setOptionInput] = useState('')
 
   const filtered = menuItems.filter(m => {
     const matchSearch = m.name.toLowerCase().includes(search.toLowerCase()) || (m.category ?? '').includes(search)
@@ -34,7 +36,8 @@ export function MenuClient({ menuItems: initial, shopId }: { menuItems: MenuItem
 
   function openAdd() {
     setEditing(null)
-    setForm({ name: '', description: '', price: '', dailyLimit: '20', category: 'แกงและต้ม', customCategory: '', imageUrl: '', isAvailable: true })
+    setForm({ name: '', description: '', price: '', dailyLimit: '20', category: 'แกงและต้ม', customCategory: '', imageUrl: '', isAvailable: true, options: [] })
+    setOptionInput('')
     setShowModal(true)
   }
 
@@ -46,8 +49,20 @@ export function MenuClient({ menuItems: initial, shopId }: { menuItems: MenuItem
       dailyLimit: String(item.dailyLimit),
       category: isKnown ? cat : 'อื่นๆ',
       customCategory: isKnown ? '' : cat,
-      imageUrl: item.imageUrl ?? '', isAvailable: item.isAvailable })
+      imageUrl: item.imageUrl ?? '', isAvailable: item.isAvailable, options: item.options ?? [] })
+    setOptionInput('')
     setShowModal(true)
+  }
+
+  function addOption() {
+    const val = optionInput.trim()
+    if (!val || form.options.includes(val)) return
+    setForm(f => ({ ...f, options: [...f.options, val] }))
+    setOptionInput('')
+  }
+
+  function removeOption(opt: string) {
+    setForm(f => ({ ...f, options: f.options.filter(o => o !== opt) }))
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -57,7 +72,7 @@ export function MenuClient({ menuItems: initial, shopId }: { menuItems: MenuItem
       const finalCategory = form.category === 'อื่นๆ' ? (form.customCategory.trim() || 'อื่นๆ') : form.category
       const body = { name: form.name, description: form.description, price: parseFloat(form.price),
         dailyLimit: parseInt(form.dailyLimit), category: finalCategory,
-        imageUrl: form.imageUrl || null, isAvailable: form.isAvailable, shopId }
+        imageUrl: form.imageUrl || null, isAvailable: form.isAvailable, options: form.options, shopId }
       const url = editing ? `/api/menu/${editing.id}` : '/api/menu'
       const res = await fetch(url, { method: editing ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
@@ -278,6 +293,40 @@ export function MenuClient({ menuItems: initial, shopId }: { menuItems: MenuItem
                   />
                 )}
               </div>
+              {/* Options (ปั่น / ไม่ปั่น / เย็น / ร้อน ฯลฯ) */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                  <Tag className="w-3.5 h-3.5 inline mr-1 text-gray-400" />
+                  ตัวเลือกให้ลูกค้าเลือก <span className="text-gray-400 font-normal">(ไม่บังคับ)</span>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    value={optionInput}
+                    onChange={e => setOptionInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addOption() } }}
+                    className="input-base flex-1 text-sm"
+                    placeholder="เช่น ปั่น, ไม่ปั่น, เย็น, ร้อน..."
+                  />
+                  <button type="button" onClick={addOption}
+                    className="px-3 py-2 bg-brand-500 text-white rounded-xl text-sm font-semibold hover:bg-brand-600 shrink-0">
+                    + เพิ่ม
+                  </button>
+                </div>
+                {form.options.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {form.options.map(opt => (
+                      <span key={opt} className="flex items-center gap-1 bg-brand-50 text-brand-700 border border-brand-200 text-xs font-semibold px-2.5 py-1 rounded-full">
+                        {opt}
+                        <button type="button" onClick={() => removeOption(opt)} className="ml-0.5 text-brand-400 hover:text-red-500">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <p className="text-[11px] text-gray-400 mt-1">ลูกค้าจะต้องเลือก 1 ตัวเลือกก่อนสั่ง</p>
+              </div>
+
               <div className="flex items-center gap-3">
                 <button type="button" onClick={() => setForm({ ...form, isAvailable: !form.isAvailable })}
                   className={`relative inline-flex h-6 w-11 rounded-full transition-colors ${form.isAvailable ? 'bg-brand-500' : 'bg-gray-200'}`}>

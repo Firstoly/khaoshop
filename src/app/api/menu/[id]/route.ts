@@ -18,6 +18,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       category: body.category || null,
       imageUrl: body.imageUrl || null,
       isAvailable: body.isAvailable,
+      options: body.options ?? [],
     },
   })
   return NextResponse.json(item)

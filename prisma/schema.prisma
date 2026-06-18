@@ -93,6 +93,7 @@ model MenuItem {
   soldCount   Int         @default(0)
   isAvailable Boolean     @default(true)
   category    String?
+  options     String[]    @default([])
   shopId      String
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
@@ -120,13 +121,14 @@ model Order {
 }
 
 model OrderItem {
-  id         String   @id @default(cuid())
-  quantity   Int
-  price      Float
-  orderId    String
-  menuItemId String
-  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
+  id             String   @id @default(cuid())
+  quantity       Int
+  price          Float
+  selectedOption String?
+  orderId        String
+  menuItemId     String
+  order          Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem       MenuItem @relation(fields: [menuItemId], references: [id])
 }
 
 enum OrderStatus {

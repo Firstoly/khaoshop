@@ -13,7 +13,7 @@ import { getPusherClient, PUSHER_EVENTS, getShopChannel } from '@/lib/pusher'
 import toast from 'react-hot-toast'
 import { cn } from '@/lib/utils'
 
-interface CartItem { menuItem: any; quantity: number }
+interface CartItem { menuItem: any; quantity: number; selectedOption?: string; cartKey: string }
 const CATEGORIES_ORDER = ['ทั้งหมด', 'แกงและต้ม', 'ผัด', 'ทอดและอบ', 'ยำและสลัด', 'ข้าว', 'เครื่องดื่ม', 'อื่นๆ']
 const CAT_EMOJI: Record<string, string> = {
   'ทั้งหมด': '🍽️', 'แกงและต้ม': '🍲', 'ผัด': '🥘', 'ทอดและอบ': '🍗',
@@ -24,6 +24,7 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
   const router = useRouter()
   const [cart, setCart] = useState<CartItem[]>([])
   const [catFilter, setCatFilter] = useState('ทั้งหมด')
+  const [optionModal, setOptionModal] = useState<any | null>(null) // item waiting for option pick
 
   // อัปเดต stock อัตโนมัติเมื่อมีออเดอร์เข้า
   useEffect(() => {
@@ -53,29 +54,32 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
   const cartCount = cart.reduce((s, c) => s + c.quantity, 0)
   const canSubmit = form.paymentMethod === 'CASH' || (form.paymentMethod === 'PROMPTPAY' && slipFile !== null)
 
-  function addToCart(item: any) {
+  function addToCartWithOption(item: any, selectedOption?: string) {
     const stock = getStockStatus(item.dailyLimit, item.soldCount)
-    const inCart = cart.find(c => c.menuItem.id === item.id)?.quantity ?? 0
-    if (inCart >= stock.remaining) { toast.error('สินค้าหมดแล้ว'); return }
+    const totalInCart = cart.filter(c => c.menuItem.id === item.id).reduce((s, c) => s + c.quantity, 0)
+    if (totalInCart >= stock.remaining) { toast.error('สินค้าหมดแล้ว'); return }
+    const key = `${item.id}::${selectedOption ?? ''}`
     setCart(prev => {
-      const ex = prev.find(c => c.menuItem.id === item.id)
-      if (ex) return prev.map(c => c.menuItem.id === item.id ? { ...c, quantity: c.quantity + 1 } : c)
-      return [...prev, { menuItem: item, quantity: 1 }]
+      const ex = prev.find(c => c.cartKey === key)
+      if (ex) return prev.map(c => c.cartKey === key ? { ...c, quantity: c.quantity + 1 } : c)
+      return [...prev, { menuItem: item, quantity: 1, selectedOption, cartKey: key }]
     })
-    const newInCart = inCart + 1
-    if (stock.remaining - newInCart === 0) {
-      toast('นี่คือที่สุดท้ายแล้ว! 🔥', { icon: '⚠️' })
-    } else if (stock.remaining - newInCart <= 2) {
-      toast(`เหลืออีกแค่ ${stock.remaining - newInCart} ที่เท่านั้น`, { icon: '⚡' })
-    }
+    const newTotal = totalInCart + 1
+    if (stock.remaining - newTotal === 0) toast('นี่คือที่สุดท้ายแล้ว! 🔥', { icon: '⚠️' })
+    else if (stock.remaining - newTotal <= 2) toast(`เหลืออีกแค่ ${stock.remaining - newTotal} ที่เท่านั้น`, { icon: '⚡' })
   }
 
-  function removeFromCart(id: string) {
+  function addToCart(item: any) {
+    if (item.options?.length > 0) { setOptionModal(item); return }
+    addToCartWithOption(item, undefined)
+  }
+
+  function removeFromCart(cartKey: string) {
     setCart(prev => {
-      const ex = prev.find(c => c.menuItem.id === id)
+      const ex = prev.find(c => c.cartKey === cartKey)
       if (!ex) return prev
-      if (ex.quantity === 1) return prev.filter(c => c.menuItem.id !== id)
-      return prev.map(c => c.menuItem.id === id ? { ...c, quantity: c.quantity - 1 } : c)
+      if (ex.quantity === 1) return prev.filter(c => c.cartKey !== cartKey)
+      return prev.map(c => c.cartKey === cartKey ? { ...c, quantity: c.quantity - 1 } : c)
     })
   }
 
@@ -109,7 +113,7 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
           customerAddress: form.address,
           note: form.note,
           paymentMethod: form.paymentMethod,
-          items: cart.map(c => ({ menuItemId: c.menuItem.id, quantity: c.quantity, price: c.menuItem.price })),
+          items: cart.map(c => ({ menuItemId: c.menuItem.id, quantity: c.quantity, price: c.menuItem.price, selectedOption: c.selectedOption ?? null })),
         }),
       })
       if (!res.ok) { const e = await res.json(); throw new Error(e.error) }
@@ -354,7 +358,7 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
             </h2>
             <div className="space-y-3">
               {cart.map(c => (
-                <div key={c.menuItem.id} className="flex items-center gap-3 py-2">
+                <div key={c.cartKey} className="flex items-center gap-3 py-2">
                   {c.menuItem.imageUrl && (
                     <div className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0">
                       <Image src={c.menuItem.imageUrl} alt={c.menuItem.name} fill className="object-cover" />
@@ -362,6 +366,9 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
                   )}
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-gray-800 text-sm truncate">{c.menuItem.name}</p>
+                    {c.selectedOption && (
+                      <span className="text-[10px] font-bold text-brand-600 bg-brand-50 px-1.5 py-0.5 rounded-full">{c.selectedOption}</span>
+                    )}
                     <p className="text-xs text-gray-400">{formatPrice(c.menuItem.price)} × {c.quantity}</p>
                   </div>
                   <p className="font-bold text-gray-900">{formatPrice(c.menuItem.price * c.quantity)}</p>
@@ -431,8 +438,9 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
           ) : (
             cart.map(c => {
               const stock = getStockStatus(c.menuItem.dailyLimit, c.menuItem.soldCount)
+              const totalInCart = cart.filter(x => x.menuItem.id === c.menuItem.id).reduce((s, x) => s + x.quantity, 0)
               return (
-                <div key={c.menuItem.id} className="bg-white rounded-2xl p-4 shadow-sm flex items-center gap-4">
+                <div key={c.cartKey} className="bg-white rounded-2xl p-4 shadow-sm flex items-center gap-4">
                   <div className="relative w-20 h-20 rounded-2xl bg-orange-50 shrink-0 overflow-hidden">
                     {c.menuItem.imageUrl
                       ? <Image src={c.menuItem.imageUrl} alt={c.menuItem.name} fill className="object-cover" />
@@ -441,18 +449,23 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-gray-900 text-base">{c.menuItem.name}</p>
+                    {c.selectedOption && (
+                      <span className="inline-block mt-0.5 text-[11px] font-bold text-brand-600 bg-brand-50 border border-brand-200 px-2 py-0.5 rounded-full">
+                        {c.selectedOption}
+                      </span>
+                    )}
                     <p className="text-brand-500 font-bold text-sm mt-1">{formatPrice(c.menuItem.price)}</p>
                     <div className="flex items-center gap-3 mt-2">
                       <button
-                        onClick={() => removeFromCart(c.menuItem.id)}
+                        onClick={() => removeFromCart(c.cartKey)}
                         className="w-9 h-9 bg-gray-100 hover:bg-gray-200 rounded-xl flex items-center justify-center transition-colors"
                       >
                         <Minus className="w-4 h-4 text-gray-600" />
                       </button>
                       <span className="text-lg font-black text-gray-900 w-6 text-center">{c.quantity}</span>
                       <button
-                        onClick={() => addToCart(c.menuItem)}
-                        disabled={c.quantity >= stock.remaining}
+                        onClick={() => addToCartWithOption(c.menuItem, c.selectedOption)}
+                        disabled={totalInCart >= stock.remaining}
                         className="w-9 h-9 bg-brand-500 hover:bg-brand-600 rounded-xl flex items-center justify-center text-white transition-colors disabled:opacity-40"
                       >
                         <Plus className="w-4 h-4" />
@@ -559,7 +572,7 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
         <div className="px-4 pt-4 grid grid-cols-2 gap-3">
           {filtered.map(item => {
             const stock = getStockStatus(item.dailyLimit, item.soldCount)
-            const inCart = cart.find(c => c.menuItem.id === item.id)?.quantity ?? 0
+            const inCart = cart.filter(c => c.menuItem.id === item.id).reduce((s, c) => s + c.quantity, 0)
             const soldOut = stock.remaining === 0
 
             return (
@@ -609,10 +622,10 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
                   <div className="flex items-center justify-between mt-3">
                     <span className="font-display font-black text-brand-500 text-base">{formatPrice(item.price)}</span>
                     {!soldOut && (
-                      inCart > 0 ? (
+                      inCart > 0 && !item.options?.length ? (
                         <div className="flex items-center gap-1.5">
                           <button
-                            onClick={() => removeFromCart(item.id)}
+                            onClick={() => removeFromCart(`${item.id}::`)}
                             className="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-xl flex items-center justify-center transition-colors"
                           >
                             <Minus className="w-3.5 h-3.5 text-gray-600" />
@@ -669,6 +682,36 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
               <p className="font-display font-black text-xl">{formatPrice(cartTotal)}</p>
             </div>
           </button>
+        </div>
+      )}
+
+      {/* ── Option picker modal ── */}
+      {optionModal && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm"
+          onClick={() => setOptionModal(null)}>
+          <div className="bg-white rounded-t-3xl w-full max-w-lg p-6 animate-bounce-in"
+            onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="font-display text-lg font-bold text-gray-900">{optionModal.name}</h3>
+                <p className="text-sm text-gray-400">เลือก 1 ตัวเลือก</p>
+              </div>
+              <button onClick={() => setOptionModal(null)}
+                className="w-8 h-8 bg-gray-100 rounded-xl flex items-center justify-center">
+                <X className="w-4 h-4 text-gray-600" />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {optionModal.options.map((opt: string) => (
+                <button key={opt}
+                  onClick={() => { addToCartWithOption(optionModal, opt); setOptionModal(null) }}
+                  className="py-4 rounded-2xl border-2 border-brand-200 bg-brand-50 hover:border-brand-500 hover:bg-brand-100 font-bold text-brand-700 text-base transition-all active:scale-95">
+                  {opt}
+                </button>
+              ))}
+            </div>
+            <p className="text-center text-xs text-gray-400 mt-4">แตะตัวเลือกเพื่อเพิ่มลงตะกร้า</p>
+          </div>
         </div>
       )}
     </div>

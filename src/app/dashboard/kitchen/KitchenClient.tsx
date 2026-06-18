@@ -9,6 +9,7 @@ type OrderItem = {
   id: string
   quantity: number
   price: number
+  selectedOption?: string | null
   menuItem: { name: string; category: string | null }
 }
 
@@ -90,7 +91,7 @@ export function KitchenClient({ orders: initial, shopId }: { orders: Order[]; sh
   const activeOrders = hideCompleted ? orders.filter(o => !isOrderDone(o)) : orders
   for (const order of activeOrders) {
     for (const item of order.items) {
-      const name = item.menuItem.name
+      const name = item.menuItem.name + (item.selectedOption ? ` / ${item.selectedOption}` : '')
       if (!menuMap.has(name)) menuMap.set(name, [])
       menuMap.get(name)!.push({
         key: `${order.id}-${item.id}`,
@@ -411,6 +412,9 @@ export function KitchenClient({ orders: initial, shopId }: { orders: Order[]; sh
                           }
                           <span className={cn('text-sm flex-1', itemDone ? 'line-through text-gray-300' : 'text-gray-800')}>
                             {item.menuItem.name}
+                            {item.selectedOption && (
+                              <span className="ml-1 text-[10px] font-bold text-brand-500 bg-brand-50 px-1.5 py-0.5 rounded-full">{item.selectedOption}</span>
+                            )}
                           </span>
                           <span className={cn('text-lg font-black', itemDone ? 'text-gray-200' : 'text-brand-500')}>
                             ×{item.quantity}

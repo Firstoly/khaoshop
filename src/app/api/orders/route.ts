@@ -42,6 +42,7 @@ export async function POST(req: NextRequest) {
               menuItemId: i.menuItemId,
               quantity: i.quantity,
               price: i.price,
+              selectedOption: i.selectedOption ?? null,
             })),
           },
         },

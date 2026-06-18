@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
       category: body.category || null,
       imageUrl: body.imageUrl || null,
       isAvailable: body.isAvailable ?? true,
+      options: body.options ?? [],
       shopId: body.shopId,
     },
   })

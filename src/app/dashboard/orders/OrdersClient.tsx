@@ -256,7 +256,7 @@ export function OrdersClient({ orders: initial, shopId }: { orders: any[]; shopI
                     </div>
                     <p className="text-xs text-gray-400 mb-0.5">{order.customerPhone}</p>
                     <p className="text-xs text-gray-500 truncate">
-                      {order.items.map((i: any) => `${i.menuItem.name} ×${i.quantity}`).join(' · ')}
+                      {order.items.map((i: any) => `${i.menuItem.name}${i.selectedOption ? ` (${i.selectedOption})` : ''} ×${i.quantity}`).join(' · ')}
                     </p>
 
                     {/* Alert badges */}
@@ -353,6 +353,11 @@ export function OrdersClient({ orders: initial, shopId }: { orders: any[]; shopI
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-bold text-gray-900 text-base leading-tight">{item.menuItem.name}</p>
+                        {item.selectedOption && (
+                          <span className="inline-block text-[10px] font-bold text-brand-600 bg-brand-50 border border-brand-200 px-2 py-0.5 rounded-full mt-0.5">
+                            {item.selectedOption}
+                          </span>
+                        )}
                         <p className="text-xs text-gray-400 mt-0.5">{formatPrice(item.price)} / ชิ้น</p>
                       </div>
                       <p className="font-bold text-brand-500 shrink-0">{formatPrice(item.price * item.quantity)}</p>
