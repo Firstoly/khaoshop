@@ -1,14 +1,15 @@
 import { prisma } from '@/lib/prisma'
-import { ShieldCheck, UtensilsCrossed, ClipboardList, ListChecks, AlertCircle, BarChart2, Settings } from 'lucide-react'
+import { ShieldCheck, UtensilsCrossed, ClipboardList, ListChecks, AlertCircle, BarChart2, Settings, Tag } from 'lucide-react'
 import { PermissionToggle } from './PermissionToggle'
 
 const PERM_DEFS = [
-  { key: 'canMenu',      label: 'จัดการเมนู',       icon: UtensilsCrossed, color: 'text-orange-500' },
-  { key: 'canOrders',    label: 'จัดการออเดอร์',     icon: ClipboardList,   color: 'text-blue-500'   },
-  { key: 'canKitchen',   label: 'เตรียมอาหาร',       icon: ListChecks,      color: 'text-purple-500' },
-  { key: 'canDebt',      label: 'ลูกหนี้ค้างชำระ',  icon: AlertCircle,     color: 'text-red-500'    },
-  { key: 'canAnalytics', label: 'รายงานยอดขาย',     icon: BarChart2,       color: 'text-emerald-500'},
-  { key: 'canSettings',  label: 'ตั้งค่าร้าน',      icon: Settings,        color: 'text-gray-500'   },
+  { key: 'canMenu',         label: 'จัดการเมนู',          icon: UtensilsCrossed, color: 'text-orange-500' },
+  { key: 'canOrders',       label: 'จัดการออเดอร์',        icon: ClipboardList,   color: 'text-blue-500'   },
+  { key: 'canKitchen',      label: 'เตรียมอาหาร',          icon: ListChecks,      color: 'text-purple-500' },
+  { key: 'showMenuOptions', label: 'ตัวเลือกเมนู (ปั่น/ไม่ปั่น)', icon: Tag,      color: 'text-amber-500'  },
+  { key: 'canDebt',         label: 'ลูกหนี้ค้างชำระ',     icon: AlertCircle,     color: 'text-red-500'    },
+  { key: 'canAnalytics',    label: 'รายงานยอดขาย',        icon: BarChart2,       color: 'text-emerald-500'},
+  { key: 'canSettings',     label: 'ตั้งค่าร้าน',         icon: Settings,        color: 'text-gray-500'   },
 ]
 
 async function getShopUsers() {
@@ -97,7 +98,7 @@ export default async function PermissionsPage() {
               ))}
               {users.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-gray-400 text-sm">
+                  <td colSpan={8} className="px-6 py-12 text-center text-gray-400 text-sm">
                     ยังไม่มีร้านค้าในระบบ
                   </td>
                 </tr>

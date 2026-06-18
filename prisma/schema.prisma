@@ -29,12 +29,13 @@ model User {
 
 model UserPermission {
   userId       String  @id
-  canMenu      Boolean @default(true)
-  canOrders    Boolean @default(true)
-  canKitchen   Boolean @default(true)
-  canDebt      Boolean @default(true)
-  canAnalytics Boolean @default(true)
-  canSettings  Boolean @default(true)
+  canMenu         Boolean @default(true)
+  canOrders       Boolean @default(true)
+  canKitchen      Boolean @default(true)
+  canDebt         Boolean @default(true)
+  canAnalytics    Boolean @default(true)
+  canSettings     Boolean @default(true)
+  showMenuOptions Boolean @default(true)
   user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
@@ -73,8 +74,7 @@ model Shop {
   phone         String?
   address       String?
   isOpen        Boolean    @default(true)
-  showKitchen     Boolean    @default(true)
-  showMenuOptions Boolean    @default(true)
+  showKitchen   Boolean    @default(true)
   promptpayId   String?
   promptpayName String?
   qrCodeUrl     String?
