@@ -4,12 +4,17 @@ import { useState, useEffect, useRef } from 'react'
 import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Search, UtensilsCrossed, X, Loader2, PackageX, RotateCcw, Tag } from 'lucide-react'
 
 const OPTION_STORAGE_KEY = 'khaoshop_option_history'
+const DEFAULT_OPTIONS = ['ปั่น', 'ไม่ปั่น', 'เย็น', 'ร้อน']
 
 function loadOptionHistory(): string[] {
-  try { return JSON.parse(localStorage.getItem(OPTION_STORAGE_KEY) ?? '[]') } catch { return [] }
+  try {
+    const saved: string[] = JSON.parse(localStorage.getItem(OPTION_STORAGE_KEY) ?? '[]')
+    return [...DEFAULT_OPTIONS, ...saved.filter(s => !DEFAULT_OPTIONS.includes(s))]
+  } catch { return DEFAULT_OPTIONS }
 }
 function saveOptionToHistory(opt: string) {
-  const prev = loadOptionHistory()
+  if (DEFAULT_OPTIONS.includes(opt)) return
+  const prev: string[] = (() => { try { return JSON.parse(localStorage.getItem(OPTION_STORAGE_KEY) ?? '[]') } catch { return [] } })()
   if (!prev.includes(opt)) localStorage.setItem(OPTION_STORAGE_KEY, JSON.stringify([opt, ...prev].slice(0, 30)))
 }
 import { formatPrice, getStockStatus } from '@/lib/utils'
