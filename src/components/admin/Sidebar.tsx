@@ -10,17 +10,17 @@ import { cn } from '@/lib/utils'
 type Permissions = {
   canMenu: boolean
   canOrders: boolean
+  canKitchen: boolean
   canDebt: boolean
   canAnalytics: boolean
   canSettings: boolean
-  showKitchen?: boolean
 }
 
 const ALL_NAV = [
   { href: '/dashboard',           icon: LayoutDashboard, label: 'แดชบอร์ด',        permKey: null          },
   { href: '/dashboard/menu',      icon: UtensilsCrossed, label: 'จัดการเมนู',       permKey: 'canMenu'     },
   { href: '/dashboard/orders',    icon: ClipboardList,   label: 'จัดการออเดอร์',    permKey: 'canOrders'   },
-  { href: '/dashboard/kitchen',   icon: ListChecks,      label: 'เตรียมอาหาร',       permKey: 'canOrders'   },
+  { href: '/dashboard/kitchen',   icon: ListChecks,      label: 'เตรียมอาหาร',       permKey: 'canKitchen'  },
   { href: '/dashboard/debt',      icon: AlertCircle,     label: 'ลูกหนี้ค้างชำระ', permKey: 'canDebt'     },
   { href: '/dashboard/analytics', icon: BarChart2,       label: 'รายงานยอดขาย',    permKey: 'canAnalytics'},
   { href: '/dashboard/settings',  icon: Settings,        label: 'ตั้งค่าร้าน',     permKey: 'canSettings' },

@@ -31,6 +31,7 @@ model UserPermission {
   userId       String  @id
   canMenu      Boolean @default(true)
   canOrders    Boolean @default(true)
+  canKitchen   Boolean @default(true)
   canDebt      Boolean @default(true)
   canAnalytics Boolean @default(true)
   canSettings  Boolean @default(true)

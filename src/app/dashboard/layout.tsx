@@ -19,6 +19,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const perms = {
     canMenu:      permission?.canMenu      ?? true,
     canOrders:    permission?.canOrders    ?? true,
+    canKitchen:   permission?.canKitchen   ?? true,
     canDebt:      permission?.canDebt      ?? true,
     canAnalytics: permission?.canAnalytics ?? true,
     canSettings:  permission?.canSettings  ?? true,
