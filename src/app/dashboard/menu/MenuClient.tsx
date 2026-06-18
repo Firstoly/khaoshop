@@ -1,7 +1,17 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Search, UtensilsCrossed, X, Loader2, PackageX, RotateCcw, Tag } from 'lucide-react'
+
+const OPTION_STORAGE_KEY = 'khaoshop_option_history'
+
+function loadOptionHistory(): string[] {
+  try { return JSON.parse(localStorage.getItem(OPTION_STORAGE_KEY) ?? '[]') } catch { return [] }
+}
+function saveOptionToHistory(opt: string) {
+  const prev = loadOptionHistory()
+  if (!prev.includes(opt)) localStorage.setItem(OPTION_STORAGE_KEY, JSON.stringify([opt, ...prev].slice(0, 30)))
+}
 import { formatPrice, getStockStatus } from '@/lib/utils'
 import { ImageUpload } from '@/components/ui/ImageUpload'
 import toast from 'react-hot-toast'
@@ -27,6 +37,14 @@ export function MenuClient({ menuItems: initial, shopId }: { menuItems: MenuItem
     options: [] as string[],
   })
   const [optionInput, setOptionInput] = useState('')
+  const [optionHistory, setOptionHistory] = useState<string[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const optionInputRef = useRef<HTMLInputElement>(null)
+  const suggestionsRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    setOptionHistory(loadOptionHistory())
+  }, [showModal])
 
   const filtered = menuItems.filter(m => {
     const matchSearch = m.name.toLowerCase().includes(search.toLowerCase()) || (m.category ?? '').includes(search)
@@ -54,11 +72,14 @@ export function MenuClient({ menuItems: initial, shopId }: { menuItems: MenuItem
     setShowModal(true)
   }
 
-  function addOption() {
-    const val = optionInput.trim()
-    if (!val || form.options.includes(val)) return
-    setForm(f => ({ ...f, options: [...f.options, val] }))
+  function addOption(val?: string) {
+    const v = (val ?? optionInput).trim()
+    if (!v || form.options.includes(v)) return
+    setForm(f => ({ ...f, options: [...f.options, v] }))
+    saveOptionToHistory(v)
+    setOptionHistory(loadOptionHistory())
     setOptionInput('')
+    setShowSuggestions(false)
   }
 
   function removeOption(opt: string) {
@@ -299,15 +320,37 @@ export function MenuClient({ menuItems: initial, shopId }: { menuItems: MenuItem
                   <Tag className="w-3.5 h-3.5 inline mr-1 text-gray-400" />
                   ตัวเลือกให้ลูกค้าเลือก <span className="text-gray-400 font-normal">(ไม่บังคับ)</span>
                 </label>
-                <div className="flex gap-2">
-                  <input
-                    value={optionInput}
-                    onChange={e => setOptionInput(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addOption() } }}
-                    className="input-base flex-1 text-sm"
-                    placeholder="เช่น ปั่น, ไม่ปั่น, เย็น, ร้อน..."
-                  />
-                  <button type="button" onClick={addOption}
+                <div className="flex gap-2 relative">
+                  <div className="flex-1 relative">
+                    <input
+                      ref={optionInputRef}
+                      value={optionInput}
+                      onChange={e => { setOptionInput(e.target.value); setShowSuggestions(true) }}
+                      onFocus={() => setShowSuggestions(true)}
+                      onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addOption() } }}
+                      className="input-base w-full text-sm"
+                      placeholder="เช่น ปั่น, ไม่ปั่น, เย็น, ร้อน..."
+                    />
+                    {showSuggestions && (() => {
+                      const q = optionInput.trim().toLowerCase()
+                      const hits = optionHistory.filter(h =>
+                        !form.options.includes(h) && (q === '' || h.toLowerCase().includes(q))
+                      )
+                      return hits.length > 0 ? (
+                        <div ref={suggestionsRef} className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-10 overflow-hidden">
+                          {hits.map(h => (
+                            <button key={h} type="button"
+                              onMouseDown={() => addOption(h)}
+                              className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-700 transition-colors">
+                              {h}
+                            </button>
+                          ))}
+                        </div>
+                      ) : null
+                    })()}
+                  </div>
+                  <button type="button" onClick={() => addOption()}
                     className="px-3 py-2 bg-brand-500 text-white rounded-xl text-sm font-semibold hover:bg-brand-600 shrink-0">
                     + เพิ่ม
                   </button>
