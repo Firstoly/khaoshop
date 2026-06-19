@@ -29,6 +29,7 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
   const [optionModal, setOptionModal] = useState<any | null>(null)
   const [modalSize, setModalSize] = useState<SizeOption | null>(null)
   const [modalOption, setModalOption] = useState<string>('')
+  const [modalToppings, setModalToppings] = useState<SizeOption[]>([])
 
   useEffect(() => {
     const pusher = getPusherClient()
@@ -76,8 +77,9 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
 
   function addToCart(item: any) {
     const hasSizes = item.sizes?.length > 0
+    const hasToppings = item.toppings?.length > 0
     const hasOptions = item.options?.length > 0
-    if (hasSizes || hasOptions) { setOptionModal(item); return }
+    if (hasSizes || hasToppings || hasOptions) { setOptionModal(item); return }
     addToCartWithOption(item, undefined, item.price)
   }
 
@@ -85,6 +87,7 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
     setOptionModal(null)
     setModalSize(null)
     setModalOption('')
+    setModalToppings([])
   }
 
   function removeFromCart(cartKey: string) {
@@ -691,33 +694,43 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
         </div>
       )}
 
-      {/* ── Size + Option picker modal ── */}
+      {/* ── Size + Topping + Option picker modal ── */}
       {optionModal && (() => {
         const hasSizes = optionModal.sizes?.length > 0
+        const hasToppings = optionModal.toppings?.length > 0
         const hasOptions = optionModal.options?.length > 0
+        const needsConfirm = hasSizes || hasToppings
 
-        function confirmWithSize() {
-          if (!modalSize) { toast.error('กรุณาเลือกขนาดก่อน'); return }
-          const combined = [modalSize.name, modalOption].filter(Boolean).join(' / ')
-          addToCartWithOption(optionModal, combined || undefined, modalSize.price)
+        const basePrice = modalSize?.price ?? optionModal.price
+        const toppingsTotal = modalToppings.reduce((s, t) => s + t.price, 0)
+        const totalPrice = basePrice + toppingsTotal
+
+        function confirm() {
+          if (hasSizes && !modalSize) { toast.error('กรุณาเลือกขนาดก่อน'); return }
+          const parts = [
+            modalSize?.name,
+            modalToppings.length > 0 ? modalToppings.map(t => t.name).join(', ') : undefined,
+            modalOption || undefined,
+          ].filter(Boolean)
+          addToCartWithOption(optionModal, parts.join(' / ') || undefined, totalPrice)
           closeModal()
         }
 
         return (
           <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm"
             onClick={closeModal}>
-            <div className="bg-white rounded-t-3xl w-full max-w-lg p-6 space-y-5 animate-bounce-in"
+            <div className="bg-white rounded-t-3xl w-full max-w-lg p-6 space-y-5 animate-bounce-in max-h-[85vh] overflow-y-auto"
               onClick={e => e.stopPropagation()}>
+
+              {/* Header */}
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-display text-lg font-bold text-gray-900">{optionModal.name}</h3>
                   <p className="text-sm text-gray-400">
-                    {hasSizes ? 'เลือกขนาด' : 'เลือก 1 ตัวเลือก'}
-                    {hasSizes && hasOptions ? ' และตัวเลือกเพิ่มเติม' : ''}
+                    {[hasSizes && 'เลือกขนาด', hasToppings && 'ท็อปปิ้ง', hasOptions && !needsConfirm && 'เลือก 1 ตัวเลือก'].filter(Boolean).join(' · ')}
                   </p>
                 </div>
-                <button onClick={closeModal}
-                  className="w-8 h-8 bg-gray-100 rounded-xl flex items-center justify-center">
+                <button onClick={closeModal} className="w-8 h-8 bg-gray-100 rounded-xl flex items-center justify-center">
                   <X className="w-4 h-4 text-gray-600" />
                 </button>
               </div>
@@ -725,13 +738,10 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
               {/* Size selection */}
               {hasSizes && (
                 <div>
-                  <p className="text-sm font-semibold text-gray-700 mb-2.5">
-                    ขนาด <span className="text-red-500">*</span>
-                  </p>
+                  <p className="text-sm font-semibold text-gray-700 mb-2.5">ขนาด <span className="text-red-500">*</span></p>
                   <div className="grid grid-cols-2 gap-2">
                     {optionModal.sizes.map((s: SizeOption) => (
-                      <button key={s.name} type="button"
-                        onClick={() => setModalSize(s)}
+                      <button key={s.name} type="button" onClick={() => setModalSize(s)}
                         className={cn(
                           'py-3 px-4 rounded-2xl border-2 font-bold text-sm transition-all text-left',
                           modalSize?.name === s.name
@@ -748,18 +758,54 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
                 </div>
               )}
 
+              {/* Topping selection */}
+              {hasToppings && (
+                <div>
+                  <p className="text-sm font-semibold text-gray-700 mb-2.5">
+                    ท็อปปิ้ง <span className="text-gray-400 font-normal">(เลือกได้หลายอย่าง)</span>
+                  </p>
+                  <div className="space-y-2">
+                    {optionModal.toppings.map((t: SizeOption) => {
+                      const selected = modalToppings.some(x => x.name === t.name)
+                      return (
+                        <button key={t.name} type="button"
+                          onClick={() => setModalToppings(prev =>
+                            selected ? prev.filter(x => x.name !== t.name) : [...prev, t]
+                          )}
+                          className={cn(
+                            'w-full flex items-center justify-between px-4 py-3 rounded-2xl border-2 transition-all',
+                            selected ? 'border-brand-500 bg-brand-50' : 'border-gray-200 bg-white hover:border-brand-300'
+                          )}>
+                          <div className="flex items-center gap-3">
+                            <div className={cn(
+                              'w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors',
+                              selected ? 'border-brand-500 bg-brand-500' : 'border-gray-300'
+                            )}>
+                              {selected && <CheckCircle className="w-3 h-3 text-white" />}
+                            </div>
+                            <span className={cn('font-semibold text-sm', selected ? 'text-brand-700' : 'text-gray-700')}>{t.name}</span>
+                          </div>
+                          <span className={cn('font-bold text-sm', selected ? 'text-brand-500' : 'text-gray-400')}>
+                            +{formatPrice(t.price)}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Option selection */}
               {hasOptions && (
                 <div>
                   <p className="text-sm font-semibold text-gray-700 mb-2.5">
-                    ตัวเลือก
-                    {hasSizes && <span className="text-gray-400 font-normal ml-1">(ไม่บังคับ)</span>}
+                    ตัวเลือก {needsConfirm && <span className="text-gray-400 font-normal">(ไม่บังคับ)</span>}
                   </p>
                   <div className="grid grid-cols-2 gap-2">
                     {optionModal.options.map((opt: string) => (
                       <button key={opt} type="button"
                         onClick={() => {
-                          if (hasSizes) {
+                          if (needsConfirm) {
                             setModalOption(prev => prev === opt ? '' : opt)
                           } else {
                             addToCartWithOption(optionModal, opt, optionModal.price)
@@ -768,7 +814,7 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
                         }}
                         className={cn(
                           'py-3 rounded-2xl border-2 font-bold text-sm transition-all active:scale-95',
-                          hasSizes
+                          needsConfirm
                             ? modalOption === opt
                               ? 'border-brand-500 bg-brand-50 text-brand-700'
                               : 'border-gray-200 bg-white text-gray-700 hover:border-brand-300'
@@ -778,27 +824,40 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
                       </button>
                     ))}
                   </div>
-                  {!hasSizes && (
-                    <p className="text-center text-xs text-gray-400 mt-3">แตะตัวเลือกเพื่อเพิ่มลงตะกร้า</p>
-                  )}
+                  {!needsConfirm && <p className="text-center text-xs text-gray-400 mt-3">แตะตัวเลือกเพื่อเพิ่มลงตะกร้า</p>}
                 </div>
               )}
 
-              {/* Confirm button (only for items with sizes) */}
-              {hasSizes && (
-                <button
-                  onClick={confirmWithSize}
-                  disabled={!modalSize}
+              {/* Price breakdown (when toppings selected) */}
+              {needsConfirm && modalToppings.length > 0 && (
+                <div className="bg-gray-50 rounded-2xl p-4 space-y-1.5">
+                  <div className="flex justify-between text-sm text-gray-500">
+                    <span>ราคาฐาน{modalSize ? ` (${modalSize.name})` : ''}</span>
+                    <span>{formatPrice(basePrice)}</span>
+                  </div>
+                  {modalToppings.map(t => (
+                    <div key={t.name} className="flex justify-between text-sm text-gray-500">
+                      <span>+ {t.name}</span>
+                      <span className="text-brand-500 font-semibold">+{formatPrice(t.price)}</span>
+                    </div>
+                  ))}
+                  <div className="flex justify-between font-bold text-gray-900 pt-1.5 border-t border-gray-200">
+                    <span>รวม</span>
+                    <span className="text-brand-500">{formatPrice(totalPrice)}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Confirm button */}
+              {needsConfirm && (
+                <button onClick={confirm} disabled={hasSizes && !modalSize}
                   className={cn(
                     'w-full py-4 rounded-2xl font-bold text-base transition-all',
-                    modalSize
-                      ? 'bg-brand-500 hover:bg-brand-600 text-white active:scale-95'
-                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    hasSizes && !modalSize
+                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : 'bg-brand-500 hover:bg-brand-600 text-white active:scale-95'
                   )}>
-                  {modalSize
-                    ? `เพิ่มลงตะกร้า — ${formatPrice(modalSize.price)}`
-                    : 'กรุณาเลือกขนาดก่อน'
-                  }
+                  {hasSizes && !modalSize ? 'กรุณาเลือกขนาดก่อน' : `เพิ่มลงตะกร้า — ${formatPrice(totalPrice)}`}
                 </button>
               )}
             </div>

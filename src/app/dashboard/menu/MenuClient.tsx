@@ -38,6 +38,7 @@ interface MenuItem {
   imageUrl?: string | null; dailyLimit: number; soldCount: number
   isAvailable: boolean; category?: string | null; options: string[]
   sizes?: any // JsonValue from Prisma
+  toppings?: any
 }
 
 export function MenuClient({ menuItems: initial, shopId, showMenuOptions = true }: { menuItems: MenuItem[]; shopId: string; showMenuOptions?: boolean }) {
@@ -53,6 +54,7 @@ export function MenuClient({ menuItems: initial, shopId, showMenuOptions = true 
     options: [] as string[],
   })
   const [sizes, setSizes] = useState<{name: string; price: string}[]>([])
+  const [toppings, setToppings] = useState<{name: string; price: string}[]>([])
   const [optionInput, setOptionInput] = useState('')
   const [optionHistory, setOptionHistory] = useState<string[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -76,6 +78,7 @@ export function MenuClient({ menuItems: initial, shopId, showMenuOptions = true 
     setEditing(null)
     setForm({ name: '', description: '', price: '', dailyLimit: '20', category: 'แกงและต้ม', customCategory: '', imageUrl: '', isAvailable: true, options: [] })
     setSizes([])
+    setToppings([])
     setOptionInput('')
     setShowModal(true)
   }
@@ -90,6 +93,7 @@ export function MenuClient({ menuItems: initial, shopId, showMenuOptions = true 
       customCategory: isKnown ? '' : cat,
       imageUrl: item.imageUrl ?? '', isAvailable: item.isAvailable, options: item.options ?? [] })
     setSizes((item.sizes ?? []).map((s: SizeOption) => ({ name: s.name, price: String(s.price) })))
+    setToppings((item.toppings ?? []).map((t: SizeOption) => ({ name: t.name, price: String(t.price) })))
     setOptionInput('')
     setShowModal(true)
   }
@@ -118,9 +122,10 @@ export function MenuClient({ menuItems: initial, shopId, showMenuOptions = true 
         setCategoryHistory(loadCategoryHistory())
       }
       const sizesData = sizes.filter(s => s.name.trim() && s.price).map(s => ({ name: s.name.trim(), price: parseFloat(s.price) }))
+      const toppingsData = toppings.filter(t => t.name.trim() && t.price).map(t => ({ name: t.name.trim(), price: parseFloat(t.price) }))
       const body = { name: form.name, description: form.description, price: parseFloat(form.price),
         dailyLimit: parseInt(form.dailyLimit), category: finalCategory,
-        imageUrl: form.imageUrl || null, isAvailable: form.isAvailable, options: form.options, sizes: sizesData, shopId }
+        imageUrl: form.imageUrl || null, isAvailable: form.isAvailable, options: form.options, sizes: sizesData, toppings: toppingsData, shopId }
       const url = editing ? `/api/menu/${editing.id}` : '/api/menu'
       const res = await fetch(url, { method: editing ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
@@ -396,6 +401,39 @@ export function MenuClient({ menuItems: initial, shopId, showMenuOptions = true 
                 ))}
                 {sizes.length > 0 && (
                   <p className="text-[11px] text-gray-400">ราคาที่ลูกค้าจ่ายจะใช้ราคาตามขนาดที่เลือก ไม่ใช่ราคาหลัก</p>
+                )}
+              </div>
+
+              {/* Toppings (ไข่มุก / วุ้น / เยลลี่ ฯลฯ บวกราคา) */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-semibold text-gray-700">
+                    <Tag className="w-3.5 h-3.5 inline mr-1 text-gray-400" />
+                    ท็อปปิ้ง <span className="text-gray-400 font-normal">(บวกราคาเพิ่ม)</span>
+                  </label>
+                  <button type="button"
+                    onClick={() => setToppings(prev => [...prev, { name: '', price: '' }])}
+                    className="text-xs text-brand-600 font-bold hover:underline">
+                    + เพิ่มท็อปปิ้ง
+                  </button>
+                </div>
+                {toppings.map((t, i) => (
+                  <div key={i} className="flex gap-2 mb-2">
+                    <input value={t.name}
+                      onChange={e => setToppings(prev => prev.map((x, j) => j === i ? { ...x, name: e.target.value } : x))}
+                      className="input-base flex-1 text-sm" placeholder="เช่น ไข่มุก, วุ้น, เยลลี่" />
+                    <input type="number" value={t.price} min="0"
+                      onChange={e => setToppings(prev => prev.map((x, j) => j === i ? { ...x, price: e.target.value } : x))}
+                      className="input-base w-24 text-sm" placeholder="+ราคา" />
+                    <button type="button"
+                      onClick={() => setToppings(prev => prev.filter((_, j) => j !== i))}
+                      className="w-9 h-9 bg-red-50 text-red-400 rounded-xl flex items-center justify-center shrink-0 hover:bg-red-100">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+                {toppings.length > 0 && (
+                  <p className="text-[11px] text-gray-400">ราคาท็อปปิ้งจะบวกเพิ่มจากราคาหลัก/ขนาด</p>
                 )}
               </div>
 

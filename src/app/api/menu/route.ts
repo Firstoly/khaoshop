@@ -31,6 +31,7 @@ export async function POST(req: NextRequest) {
       isAvailable: body.isAvailable ?? true,
       options: body.options ?? [],
       sizes: body.sizes?.length ? body.sizes : undefined,
+      toppings: body.toppings?.length ? body.toppings : undefined,
       shopId: body.shopId,
     },
   })
