@@ -8,7 +8,7 @@ webpush.setVapidDetails(
 
 export async function sendPushToUser(
   subscriptions: { endpoint: string; p256dh: string; auth: string }[],
-  payload: { title: string; body: string; url?: string; tag?: string }
+  payload: { title: string; body: string; url?: string; tag?: string } & Record<string, unknown>
 ) {
   await Promise.allSettled(
     subscriptions.map((sub) =>

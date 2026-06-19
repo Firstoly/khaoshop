@@ -34,14 +34,28 @@ function hasNote(note?: string | null): boolean {
 
 export function KitchenClient({ orders: initial, shopId }: { orders: Order[]; shopId: string }) {
   const [orders, setOrders] = useState<Order[]>(initial)
-  const [checked, setChecked] = useState<Set<string>>(new Set())
+  const [checked, setChecked] = useState<Set<string>>(() => {
+    if (typeof window === 'undefined') return new Set()
+    try {
+      const stored = localStorage.getItem(`kitchen_checked_${shopId}`)
+      if (stored) return new Set(JSON.parse(stored) as string[])
+    } catch {}
+    return new Set()
+  })
   const [hideCompleted, setHideCompleted] = useState(false)
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table')
 
   useEffect(() => {
+    try {
+      localStorage.setItem(`kitchen_checked_${shopId}`, JSON.stringify(Array.from(checked)))
+    } catch {}
+  }, [checked, shopId])
+
+  useEffect(() => {
     const pusher = getPusherClient()
     const channel = pusher.subscribe(getShopChannel(shopId))
-    channel.bind(PUSHER_EVENTS.NEW_ORDER, async (data: any) => {
+
+    const handleNewOrder = async (data: any) => {
       try {
         const res = await fetch(`/api/orders/${data.orderId}`)
         if (res.ok) {
@@ -51,11 +65,11 @@ export function KitchenClient({ orders: initial, shopId }: { orders: Order[]; sh
           }
         }
       } catch {}
-    })
-    return () => {
-      channel.unbind_all()
-      pusher.unsubscribe(getShopChannel(shopId))
     }
+
+    channel.bind(PUSHER_EVENTS.NEW_ORDER, handleNewOrder)
+    // Only unbind our own handler — OrderNotifier in layout also shares this channel
+    return () => { channel.unbind(PUSHER_EVENTS.NEW_ORDER, handleNewOrder) }
   }, [shopId])
 
   function toggleCheck(key: string) {
@@ -88,7 +102,7 @@ export function KitchenClient({ orders: initial, shopId }: { orders: Order[]; sh
   const progressPct = totalItems > 0 ? Math.round((checkedItems / totalItems) * 100) : 0
 
   // build menu → order slots map
-  const menuMap = new Map<string, Array<{ key: string; queueNumber: number; customerName: string; quantity: number }>>()
+  const menuMap = new Map<string, Array<{ key: string; queueNumber: number; customerName: string; quantity: number; price: number }>>()
   const activeOrders = hideCompleted ? orders.filter(o => !isOrderDone(o)) : orders
   for (const order of activeOrders) {
     for (const item of order.items) {
@@ -99,6 +113,7 @@ export function KitchenClient({ orders: initial, shopId }: { orders: Order[]; sh
         queueNumber: order.queueNumber,
         customerName: order.customerName,
         quantity: item.quantity,
+        price: item.price,
       })
     }
   }
@@ -250,6 +265,10 @@ export function KitchenClient({ orders: initial, shopId }: { orders: Order[]; sh
                           done ? 'line-through text-gray-300' : 'text-gray-800')}>
                           #{String(slot.queueNumber).padStart(3, '0')} {slot.customerName}
                         </span>
+                        <span className={cn('text-sm font-bold shrink-0',
+                          done ? 'text-gray-200' : 'text-gray-500')}>
+                          ฿{(slot.price * slot.quantity).toLocaleString()}
+                        </span>
                         <span className={cn('text-lg font-black shrink-0',
                           done ? 'text-gray-200' : 'text-brand-500')}>
                           ×{slot.quantity}
@@ -338,6 +357,9 @@ export function KitchenClient({ orders: initial, shopId }: { orders: Order[]; sh
                               <span className="text-[10px] text-amber-700 leading-tight break-words">{note}</span>
                             </div>
                           )}
+                          <p className={cn('text-xs font-bold mt-1', orderDone ? 'text-emerald-400' : 'text-gray-400')}>
+                            ฿{order.totalAmount.toLocaleString()}
+                          </p>
                         </div>
                       </div>
                     </td>

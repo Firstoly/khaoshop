@@ -95,6 +95,10 @@ export async function POST(req: NextRequest) {
             body: itemNames,
             url: '/dashboard/orders',
             tag: `order-${order.id}`,
+            orderId: order.id,
+            customerName: order.customerName,
+            queueNumber: order.queueNumber,
+            items: order.items.map((i: any) => ({ name: i.menuItem.name, quantity: i.quantity })),
           })
         }
       }

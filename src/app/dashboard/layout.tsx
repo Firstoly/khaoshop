@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { Sidebar } from '@/components/admin/Sidebar'
 import { Topbar } from '@/components/admin/Topbar'
 import { PushManager } from '@/components/PushManager'
+import { OrderNotifier } from '@/components/OrderNotifier'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions)
@@ -12,6 +13,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if ((session.user as any)?.role === 'SUPER_ADMIN') redirect('/admin')
 
   const userId = (session.user as any)?.id
+  const shopId = (session.user as any)?.shopId as string | undefined
   const [permission, shop] = await Promise.all([
     userId ? prisma.userPermission.findUnique({ where: { userId } }) : null,
     userId ? prisma.shop.findUnique({ where: { userId }, select: { showKitchen: true } }) : null,
@@ -32,6 +34,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Topbar session={session} />
         <PushManager />
+        {shopId && <OrderNotifier shopId={shopId} />}
         <main className="flex-1 overflow-y-auto p-4 md:p-6">
           {children}
         </main>
