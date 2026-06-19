@@ -266,7 +266,7 @@ export function KitchenClient({ orders: initial, shopId }: { orders: Order[]; sh
                           #{String(slot.queueNumber).padStart(3, '0')} {slot.customerName}
                         </span>
                         <span className={cn('text-sm font-bold shrink-0',
-                          done ? 'text-gray-200' : 'text-gray-500')}>
+                          done ? 'text-gray-300' : 'text-emerald-600')}>
                           ฿{(slot.price * slot.quantity).toLocaleString()}
                         </span>
                         <span className={cn('text-lg font-black shrink-0',
@@ -357,7 +357,7 @@ export function KitchenClient({ orders: initial, shopId }: { orders: Order[]; sh
                               <span className="text-[10px] text-amber-700 leading-tight break-words">{note}</span>
                             </div>
                           )}
-                          <p className={cn('text-xs font-bold mt-1', orderDone ? 'text-emerald-400' : 'text-gray-400')}>
+                          <p className={cn('text-sm font-bold mt-1', orderDone ? 'text-emerald-500' : 'text-emerald-600')}>
                             ฿{order.totalAmount.toLocaleString()}
                           </p>
                         </div>

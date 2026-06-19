@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { formatPrice, formatDateWithDay } from '@/lib/utils'
+import { formatPrice, formatDateWithDay, formatDateShort } from '@/lib/utils'
 import { Phone, Wallet, CheckCircle, Loader2, X, MapPin, Search, TrendingDown, ChevronDown, ChevronUp } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { cn } from '@/lib/utils'
@@ -159,6 +159,13 @@ export function DebtClient({ orders: initial, totalDebt: initialTotal }: { order
                     <div className="flex items-center gap-1 text-xs text-gray-400 mt-0.5">
                       <Phone className="w-3 h-3" />
                       {group.phone}
+                    </div>
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {group.orders.map((o: any) => (
+                        <span key={o.id} className="text-[10px] font-semibold bg-orange-50 text-orange-600 border border-orange-100 px-2 py-0.5 rounded-full">
+                          {formatDateShort(o.createdAt)}
+                        </span>
+                      ))}
                     </div>
                   </div>
 
