@@ -37,8 +37,7 @@ interface MenuItem {
   id: string; name: string; description?: string | null; price: number
   imageUrl?: string | null; dailyLimit: number; soldCount: number
   isAvailable: boolean; category?: string | null; options: string[]
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  sizes?: any
+  sizes?: any // JsonValue from Prisma
 }
 
 export function MenuClient({ menuItems: initial, shopId, showMenuOptions = true }: { menuItems: MenuItem[]; shopId: string; showMenuOptions?: boolean }) {
