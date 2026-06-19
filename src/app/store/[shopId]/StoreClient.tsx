@@ -13,7 +13,9 @@ import { getPusherClient, PUSHER_EVENTS, getShopChannel } from '@/lib/pusher'
 import toast from 'react-hot-toast'
 import { cn } from '@/lib/utils'
 
-interface CartItem { menuItem: any; quantity: number; selectedOption?: string; cartKey: string }
+interface SizeOption { name: string; price: number }
+interface CartItem { menuItem: any; quantity: number; selectedOption?: string; price: number; cartKey: string }
+
 const CATEGORIES_ORDER = ['ทั้งหมด', 'แกงและต้ม', 'ผัด', 'ทอดและอบ', 'ยำและสลัด', 'ข้าว', 'เครื่องดื่ม', 'อื่นๆ']
 const CAT_EMOJI: Record<string, string> = {
   'ทั้งหมด': '🍽️', 'แกงและต้ม': '🍲', 'ผัด': '🥘', 'ทอดและอบ': '🍗',
@@ -24,9 +26,10 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
   const router = useRouter()
   const [cart, setCart] = useState<CartItem[]>([])
   const [catFilter, setCatFilter] = useState('ทั้งหมด')
-  const [optionModal, setOptionModal] = useState<any | null>(null) // item waiting for option pick
+  const [optionModal, setOptionModal] = useState<any | null>(null)
+  const [modalSize, setModalSize] = useState<SizeOption | null>(null)
+  const [modalOption, setModalOption] = useState<string>('')
 
-  // อัปเดต stock อัตโนมัติเมื่อมีออเดอร์เข้า
   useEffect(() => {
     const pusher = getPusherClient()
     const channel = pusher.subscribe(getShopChannel(shop.id))
@@ -36,6 +39,7 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
       pusher.unsubscribe(getShopChannel(shop.id))
     }
   }, [shop.id, router])
+
   const [step, setStep] = useState<'menu' | 'cart' | 'form' | 'done'>('menu')
   const [orderDone, setOrderDone] = useState<any>(null)
   const [loading, setLoading] = useState(false)
@@ -50,11 +54,12 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
   }, [menuItems])
 
   const filtered = catFilter === 'ทั้งหมด' ? menuItems : menuItems.filter(m => (m.category ?? 'อื่นๆ') === catFilter)
-  const cartTotal = cart.reduce((s, c) => s + c.menuItem.price * c.quantity, 0)
+  const cartTotal = cart.reduce((s, c) => s + c.price * c.quantity, 0)
   const cartCount = cart.reduce((s, c) => s + c.quantity, 0)
   const canSubmit = form.paymentMethod === 'CASH' || (form.paymentMethod === 'PROMPTPAY' && slipFile !== null)
 
-  function addToCartWithOption(item: any, selectedOption?: string) {
+  function addToCartWithOption(item: any, selectedOption?: string, price?: number) {
+    const actualPrice = price ?? item.price
     const stock = getStockStatus(item.dailyLimit, item.soldCount)
     const totalInCart = cart.filter(c => c.menuItem.id === item.id).reduce((s, c) => s + c.quantity, 0)
     if (totalInCart >= stock.remaining) { toast.error('สินค้าหมดแล้ว'); return }
@@ -62,7 +67,7 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
     setCart(prev => {
       const ex = prev.find(c => c.cartKey === key)
       if (ex) return prev.map(c => c.cartKey === key ? { ...c, quantity: c.quantity + 1 } : c)
-      return [...prev, { menuItem: item, quantity: 1, selectedOption, cartKey: key }]
+      return [...prev, { menuItem: item, quantity: 1, selectedOption, price: actualPrice, cartKey: key }]
     })
     const newTotal = totalInCart + 1
     if (stock.remaining - newTotal === 0) toast('นี่คือที่สุดท้ายแล้ว! 🔥', { icon: '⚠️' })
@@ -70,8 +75,16 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
   }
 
   function addToCart(item: any) {
-    if (item.options?.length > 0) { setOptionModal(item); return }
-    addToCartWithOption(item, undefined)
+    const hasSizes = item.sizes?.length > 0
+    const hasOptions = item.options?.length > 0
+    if (hasSizes || hasOptions) { setOptionModal(item); return }
+    addToCartWithOption(item, undefined, item.price)
+  }
+
+  function closeModal() {
+    setOptionModal(null)
+    setModalSize(null)
+    setModalOption('')
   }
 
   function removeFromCart(cartKey: string) {
@@ -113,7 +126,7 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
           customerAddress: form.address,
           note: form.note,
           paymentMethod: form.paymentMethod,
-          items: cart.map(c => ({ menuItemId: c.menuItem.id, quantity: c.quantity, price: c.menuItem.price, selectedOption: c.selectedOption ?? null })),
+          items: cart.map(c => ({ menuItemId: c.menuItem.id, quantity: c.quantity, price: c.price, selectedOption: c.selectedOption ?? null })),
         }),
       })
       if (!res.ok) { const e = await res.json(); throw new Error(e.error) }
@@ -182,7 +195,6 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
   if (step === 'form') {
     return (
       <div className="min-h-screen bg-gray-50">
-        {/* Header */}
         <div className="bg-white border-b border-gray-100 sticky top-0 z-10">
           <div className="max-w-lg mx-auto px-4 py-4 flex items-center gap-3">
             <button onClick={() => setStep('cart')} className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center shrink-0">
@@ -196,7 +208,6 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
         </div>
 
         <form onSubmit={handleOrder} className="max-w-lg mx-auto px-4 py-6 space-y-5 pb-32">
-          {/* Customer info */}
           <div className="bg-white rounded-3xl p-5 shadow-sm space-y-4">
             <h2 className="font-bold text-gray-800 flex items-center gap-2">
               <span className="w-7 h-7 bg-brand-100 text-brand-600 rounded-full flex items-center justify-center text-sm font-black">1</span>
@@ -230,14 +241,12 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
             </div>
           </div>
 
-          {/* Payment method */}
           <div className="bg-white rounded-3xl p-5 shadow-sm space-y-4">
             <h2 className="font-bold text-gray-800 flex items-center gap-2">
               <span className="w-7 h-7 bg-brand-100 text-brand-600 rounded-full flex items-center justify-center text-sm font-black">2</span>
               วิธีชำระเงิน
             </h2>
             <div className="grid grid-cols-2 gap-3">
-              {/* Cash */}
               <button
                 type="button"
                 onClick={() => { setForm({ ...form, paymentMethod: 'CASH' }); clearSlip() }}
@@ -263,7 +272,6 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
                 )}
               </button>
 
-              {/* QR */}
               <button
                 type="button"
                 onClick={() => {
@@ -294,7 +302,6 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
               </button>
             </div>
 
-            {/* QR section */}
             {form.paymentMethod === 'PROMPTPAY' && (
               <div className="bg-emerald-50 rounded-2xl p-5 space-y-4 border border-emerald-100">
                 <div className="text-center">
@@ -320,7 +327,6 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
                   </div>
                 )}
 
-                {/* Upload slip */}
                 <div>
                   <p className="text-sm font-bold text-gray-700 mb-2">
                     📎 แนบสลิปการโอนเงิน <span className="text-red-500">*</span>
@@ -350,7 +356,6 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
             )}
           </div>
 
-          {/* Order summary */}
           <div className="bg-white rounded-3xl p-5 shadow-sm">
             <h2 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
               <span className="w-7 h-7 bg-brand-100 text-brand-600 rounded-full flex items-center justify-center text-sm font-black">3</span>
@@ -369,9 +374,9 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
                     {c.selectedOption && (
                       <span className="text-[10px] font-bold text-brand-600 bg-brand-50 px-1.5 py-0.5 rounded-full">{c.selectedOption}</span>
                     )}
-                    <p className="text-xs text-gray-400">{formatPrice(c.menuItem.price)} × {c.quantity}</p>
+                    <p className="text-xs text-gray-400">{formatPrice(c.price)} × {c.quantity}</p>
                   </div>
-                  <p className="font-bold text-gray-900">{formatPrice(c.menuItem.price * c.quantity)}</p>
+                  <p className="font-bold text-gray-900">{formatPrice(c.price * c.quantity)}</p>
                 </div>
               ))}
               <div className="flex justify-between items-center pt-3 border-t border-gray-100">
@@ -382,7 +387,6 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
           </div>
         </form>
 
-        {/* Fixed bottom */}
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 py-4 safe-area-pb">
           <div className="max-w-lg mx-auto">
             <button
@@ -454,7 +458,7 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
                         {c.selectedOption}
                       </span>
                     )}
-                    <p className="text-brand-500 font-bold text-sm mt-1">{formatPrice(c.menuItem.price)}</p>
+                    <p className="text-brand-500 font-bold text-sm mt-1">{formatPrice(c.price)}</p>
                     <div className="flex items-center gap-3 mt-2">
                       <button
                         onClick={() => removeFromCart(c.cartKey)}
@@ -464,7 +468,7 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
                       </button>
                       <span className="text-lg font-black text-gray-900 w-6 text-center">{c.quantity}</span>
                       <button
-                        onClick={() => addToCartWithOption(c.menuItem, c.selectedOption)}
+                        onClick={() => addToCartWithOption(c.menuItem, c.selectedOption, c.price)}
                         disabled={totalInCart >= stock.remaining}
                         className="w-9 h-9 bg-brand-500 hover:bg-brand-600 rounded-xl flex items-center justify-center text-white transition-colors disabled:opacity-40"
                       >
@@ -472,7 +476,7 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
                       </button>
                     </div>
                   </div>
-                  <p className="font-black text-gray-900 text-base shrink-0">{formatPrice(c.menuItem.price * c.quantity)}</p>
+                  <p className="font-black text-gray-900 text-base shrink-0">{formatPrice(c.price * c.quantity)}</p>
                 </div>
               )
             })
@@ -507,7 +511,6 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
   // ========== MENU SCREEN ==========
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Hero Header */}
       <div className="relative bg-gradient-to-br from-brand-500 to-brand-700 overflow-hidden">
         {shop.coverUrl && (
           <Image src={shop.coverUrl} alt="cover" fill className="object-cover opacity-20" />
@@ -545,7 +548,6 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
       </div>
 
       <div className="max-w-lg mx-auto pb-36">
-        {/* Category tabs */}
         {categories.length > 1 && (
           <div className="px-4 py-4 bg-white border-b border-gray-100 sticky top-0 z-10">
             <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1">
@@ -568,12 +570,14 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
           </div>
         )}
 
-        {/* Menu grid — 2 columns */}
         <div className="px-4 pt-4 grid grid-cols-2 gap-3">
           {filtered.map(item => {
             const stock = getStockStatus(item.dailyLimit, item.soldCount)
             const inCart = cart.filter(c => c.menuItem.id === item.id).reduce((s, c) => s + c.quantity, 0)
             const soldOut = stock.remaining === 0
+            const hasSizes = item.sizes?.length > 0
+            const sizeMin = hasSizes ? Math.min(...item.sizes.map((s: SizeOption) => s.price)) : item.price
+            const sizeMax = hasSizes ? Math.max(...item.sizes.map((s: SizeOption) => s.price)) : item.price
 
             return (
               <div
@@ -583,7 +587,6 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
                   soldOut ? 'opacity-60' : 'hover:shadow-md'
                 )}
               >
-                {/* Image */}
                 <div className="relative aspect-square bg-orange-50">
                   {item.imageUrl
                     ? <Image src={item.imageUrl} alt={item.name} fill className="object-cover" />
@@ -613,16 +616,20 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
                   )}
                 </div>
 
-                {/* Info */}
                 <div className="p-3 flex flex-col flex-1">
                   <p className="font-bold text-gray-900 text-sm leading-snug line-clamp-2 flex-1">{item.name}</p>
                   {item.description && (
                     <p className="text-xs text-gray-400 mt-1 line-clamp-1">{item.description}</p>
                   )}
                   <div className="flex items-center justify-between mt-3">
-                    <span className="font-display font-black text-brand-500 text-base">{formatPrice(item.price)}</span>
+                    <span className="font-display font-black text-brand-500 text-base">
+                      {hasSizes
+                        ? sizeMin === sizeMax ? formatPrice(sizeMin) : `฿${sizeMin}–${sizeMax}`
+                        : formatPrice(item.price)
+                      }
+                    </span>
                     {!soldOut && (
-                      inCart > 0 && !item.options?.length ? (
+                      inCart > 0 && !item.options?.length && !hasSizes ? (
                         <div className="flex items-center gap-1.5">
                           <button
                             onClick={() => removeFromCart(`${item.id}::`)}
@@ -662,7 +669,6 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
         )}
       </div>
 
-      {/* Sticky cart button */}
       {cartCount > 0 && (
         <div className="fixed bottom-6 left-4 right-4 max-w-lg mx-auto z-40">
           <button
@@ -685,35 +691,120 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
         </div>
       )}
 
-      {/* ── Option picker modal ── */}
-      {optionModal && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm"
-          onClick={() => setOptionModal(null)}>
-          <div className="bg-white rounded-t-3xl w-full max-w-lg p-6 animate-bounce-in"
-            onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="font-display text-lg font-bold text-gray-900">{optionModal.name}</h3>
-                <p className="text-sm text-gray-400">เลือก 1 ตัวเลือก</p>
-              </div>
-              <button onClick={() => setOptionModal(null)}
-                className="w-8 h-8 bg-gray-100 rounded-xl flex items-center justify-center">
-                <X className="w-4 h-4 text-gray-600" />
-              </button>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              {optionModal.options.map((opt: string) => (
-                <button key={opt}
-                  onClick={() => { addToCartWithOption(optionModal, opt); setOptionModal(null) }}
-                  className="py-4 rounded-2xl border-2 border-brand-200 bg-brand-50 hover:border-brand-500 hover:bg-brand-100 font-bold text-brand-700 text-base transition-all active:scale-95">
-                  {opt}
+      {/* ── Size + Option picker modal ── */}
+      {optionModal && (() => {
+        const hasSizes = optionModal.sizes?.length > 0
+        const hasOptions = optionModal.options?.length > 0
+
+        function confirmWithSize() {
+          if (!modalSize) { toast.error('กรุณาเลือกขนาดก่อน'); return }
+          const combined = [modalSize.name, modalOption].filter(Boolean).join(' / ')
+          addToCartWithOption(optionModal, combined || undefined, modalSize.price)
+          closeModal()
+        }
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm"
+            onClick={closeModal}>
+            <div className="bg-white rounded-t-3xl w-full max-w-lg p-6 space-y-5 animate-bounce-in"
+              onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-display text-lg font-bold text-gray-900">{optionModal.name}</h3>
+                  <p className="text-sm text-gray-400">
+                    {hasSizes ? 'เลือกขนาด' : 'เลือก 1 ตัวเลือก'}
+                    {hasSizes && hasOptions ? ' และตัวเลือกเพิ่มเติม' : ''}
+                  </p>
+                </div>
+                <button onClick={closeModal}
+                  className="w-8 h-8 bg-gray-100 rounded-xl flex items-center justify-center">
+                  <X className="w-4 h-4 text-gray-600" />
                 </button>
-              ))}
+              </div>
+
+              {/* Size selection */}
+              {hasSizes && (
+                <div>
+                  <p className="text-sm font-semibold text-gray-700 mb-2.5">
+                    ขนาด <span className="text-red-500">*</span>
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {optionModal.sizes.map((s: SizeOption) => (
+                      <button key={s.name} type="button"
+                        onClick={() => setModalSize(s)}
+                        className={cn(
+                          'py-3 px-4 rounded-2xl border-2 font-bold text-sm transition-all text-left',
+                          modalSize?.name === s.name
+                            ? 'border-brand-500 bg-brand-50 text-brand-700'
+                            : 'border-gray-200 bg-white text-gray-700 hover:border-brand-300'
+                        )}>
+                        <p className="text-base">{s.name}</p>
+                        <p className={cn('font-black text-lg', modalSize?.name === s.name ? 'text-brand-500' : 'text-gray-900')}>
+                          {formatPrice(s.price)}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Option selection */}
+              {hasOptions && (
+                <div>
+                  <p className="text-sm font-semibold text-gray-700 mb-2.5">
+                    ตัวเลือก
+                    {hasSizes && <span className="text-gray-400 font-normal ml-1">(ไม่บังคับ)</span>}
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {optionModal.options.map((opt: string) => (
+                      <button key={opt} type="button"
+                        onClick={() => {
+                          if (hasSizes) {
+                            setModalOption(prev => prev === opt ? '' : opt)
+                          } else {
+                            addToCartWithOption(optionModal, opt, optionModal.price)
+                            closeModal()
+                          }
+                        }}
+                        className={cn(
+                          'py-3 rounded-2xl border-2 font-bold text-sm transition-all active:scale-95',
+                          hasSizes
+                            ? modalOption === opt
+                              ? 'border-brand-500 bg-brand-50 text-brand-700'
+                              : 'border-gray-200 bg-white text-gray-700 hover:border-brand-300'
+                            : 'border-brand-200 bg-brand-50 hover:border-brand-500 hover:bg-brand-100 text-brand-700'
+                        )}>
+                        {opt}
+                      </button>
+                    ))}
+                  </div>
+                  {!hasSizes && (
+                    <p className="text-center text-xs text-gray-400 mt-3">แตะตัวเลือกเพื่อเพิ่มลงตะกร้า</p>
+                  )}
+                </div>
+              )}
+
+              {/* Confirm button (only for items with sizes) */}
+              {hasSizes && (
+                <button
+                  onClick={confirmWithSize}
+                  disabled={!modalSize}
+                  className={cn(
+                    'w-full py-4 rounded-2xl font-bold text-base transition-all',
+                    modalSize
+                      ? 'bg-brand-500 hover:bg-brand-600 text-white active:scale-95'
+                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  )}>
+                  {modalSize
+                    ? `เพิ่มลงตะกร้า — ${formatPrice(modalSize.price)}`
+                    : 'กรุณาเลือกขนาดก่อน'
+                  }
+                </button>
+              )}
             </div>
-            <p className="text-center text-xs text-gray-400 mt-4">แตะตัวเลือกเพื่อเพิ่มลงตะกร้า</p>
           </div>
-        </div>
-      )}
+        )
+      })()}
     </div>
   )
 }

@@ -30,6 +30,7 @@ export async function POST(req: NextRequest) {
       imageUrl: body.imageUrl || null,
       isAvailable: body.isAvailable ?? true,
       options: body.options ?? [],
+      sizes: body.sizes?.length ? body.sizes : undefined,
       shopId: body.shopId,
     },
   })

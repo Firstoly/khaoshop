@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Search, UtensilsCrossed, X, Loader2, PackageX, RotateCcw, Tag } from 'lucide-react'
+import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Search, UtensilsCrossed, X, Loader2, PackageX, RotateCcw, Tag, Layers } from 'lucide-react'
 
 const OPTION_STORAGE_KEY = 'khaoshop_option_history'
 const CATEGORY_STORAGE_KEY = 'khaoshop_category_history'
@@ -32,10 +32,13 @@ import toast from 'react-hot-toast'
 
 const CATEGORIES = ['แกงและต้ม', 'ผัด', 'ทอดและอบ', 'ยำและสลัด', 'ข้าว', 'เครื่องดื่ม', 'อื่นๆ']
 
+interface SizeOption { name: string; price: number }
 interface MenuItem {
   id: string; name: string; description?: string | null; price: number
   imageUrl?: string | null; dailyLimit: number; soldCount: number
   isAvailable: boolean; category?: string | null; options: string[]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  sizes?: any
 }
 
 export function MenuClient({ menuItems: initial, shopId, showMenuOptions = true }: { menuItems: MenuItem[]; shopId: string; showMenuOptions?: boolean }) {
@@ -50,6 +53,7 @@ export function MenuClient({ menuItems: initial, shopId, showMenuOptions = true 
     category: 'แกงและต้ม', customCategory: '', imageUrl: '', isAvailable: true,
     options: [] as string[],
   })
+  const [sizes, setSizes] = useState<{name: string; price: string}[]>([])
   const [optionInput, setOptionInput] = useState('')
   const [optionHistory, setOptionHistory] = useState<string[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -72,6 +76,7 @@ export function MenuClient({ menuItems: initial, shopId, showMenuOptions = true 
   function openAdd() {
     setEditing(null)
     setForm({ name: '', description: '', price: '', dailyLimit: '20', category: 'แกงและต้ม', customCategory: '', imageUrl: '', isAvailable: true, options: [] })
+    setSizes([])
     setOptionInput('')
     setShowModal(true)
   }
@@ -85,6 +90,7 @@ export function MenuClient({ menuItems: initial, shopId, showMenuOptions = true 
       category: isKnown ? cat : 'อื่นๆ',
       customCategory: isKnown ? '' : cat,
       imageUrl: item.imageUrl ?? '', isAvailable: item.isAvailable, options: item.options ?? [] })
+    setSizes((item.sizes ?? []).map((s: SizeOption) => ({ name: s.name, price: String(s.price) })))
     setOptionInput('')
     setShowModal(true)
   }
@@ -112,9 +118,10 @@ export function MenuClient({ menuItems: initial, shopId, showMenuOptions = true 
         saveCategoryToHistory(form.customCategory.trim())
         setCategoryHistory(loadCategoryHistory())
       }
+      const sizesData = sizes.filter(s => s.name.trim() && s.price).map(s => ({ name: s.name.trim(), price: parseFloat(s.price) }))
       const body = { name: form.name, description: form.description, price: parseFloat(form.price),
         dailyLimit: parseInt(form.dailyLimit), category: finalCategory,
-        imageUrl: form.imageUrl || null, isAvailable: form.isAvailable, options: form.options, shopId }
+        imageUrl: form.imageUrl || null, isAvailable: form.isAvailable, options: form.options, sizes: sizesData, shopId }
       const url = editing ? `/api/menu/${editing.id}` : '/api/menu'
       const res = await fetch(url, { method: editing ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
@@ -242,7 +249,13 @@ export function MenuClient({ menuItems: initial, shopId, showMenuOptions = true 
                 <div className="p-4">
                   <div className="flex items-start justify-between gap-2 mb-1">
                     <h3 className="font-display font-bold text-gray-900 text-base">{item.name}</h3>
-                    <span className="text-brand-500 font-bold shrink-0">{formatPrice(item.price)}</span>
+                    {item.sizes && item.sizes.length > 0 ? (
+                      <span className="text-brand-500 font-bold shrink-0">
+                        ฿{Math.min(...(item.sizes as SizeOption[]).map(s => s.price))}–{Math.max(...(item.sizes as SizeOption[]).map(s => s.price))}
+                      </span>
+                    ) : (
+                      <span className="text-brand-500 font-bold shrink-0">{formatPrice(item.price)}</span>
+                    )}
                   </div>
                   {item.description && <p className="text-xs text-gray-400 mb-3 line-clamp-2">{item.description}</p>}
                   <div className="mb-3">
@@ -354,6 +367,39 @@ export function MenuClient({ menuItems: initial, shopId, showMenuOptions = true 
                   </div>
                 )}
               </div>
+              {/* Sizes (แก้วเล็ก / แก้วกลาง / แก้วใหญ่ ฯลฯ) */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-semibold text-gray-700">
+                    <Layers className="w-3.5 h-3.5 inline mr-1 text-gray-400" />
+                    ขนาด/ไซส์ <span className="text-gray-400 font-normal">(ราคาต่างกัน)</span>
+                  </label>
+                  <button type="button"
+                    onClick={() => setSizes(prev => [...prev, { name: '', price: '' }])}
+                    className="text-xs text-brand-600 font-bold hover:underline">
+                    + เพิ่มขนาด
+                  </button>
+                </div>
+                {sizes.map((s, i) => (
+                  <div key={i} className="flex gap-2 mb-2">
+                    <input value={s.name}
+                      onChange={e => setSizes(prev => prev.map((x, j) => j === i ? { ...x, name: e.target.value } : x))}
+                      className="input-base flex-1 text-sm" placeholder="เช่น แก้วเล็ก, กลาง, ใหญ่" />
+                    <input type="number" value={s.price} min="0"
+                      onChange={e => setSizes(prev => prev.map((x, j) => j === i ? { ...x, price: e.target.value } : x))}
+                      className="input-base w-24 text-sm" placeholder="ราคา" />
+                    <button type="button"
+                      onClick={() => setSizes(prev => prev.filter((_, j) => j !== i))}
+                      className="w-9 h-9 bg-red-50 text-red-400 rounded-xl flex items-center justify-center shrink-0 hover:bg-red-100">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+                {sizes.length > 0 && (
+                  <p className="text-[11px] text-gray-400">ราคาที่ลูกค้าจ่ายจะใช้ราคาตามขนาดที่เลือก ไม่ใช่ราคาหลัก</p>
+                )}
+              </div>
+
               {/* Options (ปั่น / ไม่ปั่น / เย็น / ร้อน ฯลฯ) */}
               {showMenuOptions && (
               <div>
