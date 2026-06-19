@@ -74,6 +74,7 @@ model Shop {
   coverUrl      String?
   phone         String?
   address       String?
+  shopType      String?
   isOpen        Boolean    @default(true)
   showKitchen   Boolean    @default(true)
   promptpayId   String?
