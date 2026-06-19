@@ -30,7 +30,8 @@ import { formatPrice, getStockStatus } from '@/lib/utils'
 import { ImageUpload } from '@/components/ui/ImageUpload'
 import toast from 'react-hot-toast'
 
-const CATEGORIES = ['แกงและต้ม', 'ผัด', 'ทอดและอบ', 'ยำและสลัด', 'ข้าว', 'เครื่องดื่ม', 'อื่นๆ']
+const CATEGORIES_FOOD = ['แกงและต้ม', 'ผัด', 'ทอดและอบ', 'ยำและสลัด', 'ข้าว', 'เครื่องดื่ม', 'อื่นๆ']
+const CATEGORIES_DRINK = ['ชา', 'กาแฟ', 'ปั่น', 'น้ำผลไม้', 'โซดา', 'นมสด', 'ช็อกโกแลต', 'อื่นๆ']
 
 interface SizeOption { name: string; price: number }
 interface MenuItem {
@@ -39,9 +40,11 @@ interface MenuItem {
   isAvailable: boolean; category?: string | null; options: string[]
   sizes?: any // JsonValue from Prisma
   toppings?: any
+  optionPrices?: any
 }
 
-export function MenuClient({ menuItems: initial, shopId, showMenuOptions = true }: { menuItems: MenuItem[]; shopId: string; showMenuOptions?: boolean }) {
+export function MenuClient({ menuItems: initial, shopId, showMenuOptions = true, shopType }: { menuItems: MenuItem[]; shopId: string; showMenuOptions?: boolean; shopType?: string | null }) {
+  const CATEGORIES = shopType?.includes('เครื่องดื่ม') ? CATEGORIES_DRINK : CATEGORIES_FOOD
   const [menuItems, setMenuItems] = useState<MenuItem[]>(initial)
   const [search, setSearch] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('ทั้งหมด')
@@ -55,6 +58,7 @@ export function MenuClient({ menuItems: initial, shopId, showMenuOptions = true 
   })
   const [sizes, setSizes] = useState<{name: string; price: string}[]>([])
   const [toppings, setToppings] = useState<{name: string; price: string}[]>([])
+  const [optionPrices, setOptionPrices] = useState<Record<string, string>>({})
   const [optionInput, setOptionInput] = useState('')
   const [optionHistory, setOptionHistory] = useState<string[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -79,6 +83,7 @@ export function MenuClient({ menuItems: initial, shopId, showMenuOptions = true 
     setForm({ name: '', description: '', price: '', dailyLimit: '20', category: 'แกงและต้ม', customCategory: '', imageUrl: '', isAvailable: true, options: [] })
     setSizes([])
     setToppings([])
+    setOptionPrices({})
     setOptionInput('')
     setShowModal(true)
   }
@@ -94,6 +99,7 @@ export function MenuClient({ menuItems: initial, shopId, showMenuOptions = true 
       imageUrl: item.imageUrl ?? '', isAvailable: item.isAvailable, options: item.options ?? [] })
     setSizes((item.sizes ?? []).map((s: SizeOption) => ({ name: s.name, price: String(s.price) })))
     setToppings((item.toppings ?? []).map((t: SizeOption) => ({ name: t.name, price: String(t.price) })))
+    setOptionPrices(Object.fromEntries(Object.entries((item.optionPrices as Record<string, number>) ?? {}).map(([k, v]) => [k, String(v)])))
     setOptionInput('')
     setShowModal(true)
   }
@@ -110,6 +116,7 @@ export function MenuClient({ menuItems: initial, shopId, showMenuOptions = true 
 
   function removeOption(opt: string) {
     setForm(f => ({ ...f, options: f.options.filter(o => o !== opt) }))
+    setOptionPrices(p => { const n = { ...p }; delete n[opt]; return n })
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -125,7 +132,9 @@ export function MenuClient({ menuItems: initial, shopId, showMenuOptions = true 
       const toppingsData = toppings.filter(t => t.name.trim() && t.price).map(t => ({ name: t.name.trim(), price: parseFloat(t.price) }))
       const body = { name: form.name, description: form.description, price: parseFloat(form.price),
         dailyLimit: parseInt(form.dailyLimit), category: finalCategory,
-        imageUrl: form.imageUrl || null, isAvailable: form.isAvailable, options: form.options, sizes: sizesData, toppings: toppingsData, shopId }
+        imageUrl: form.imageUrl || null, isAvailable: form.isAvailable, options: form.options, sizes: sizesData, toppings: toppingsData,
+        optionPrices: Object.fromEntries(form.options.filter(o => optionPrices[o] && parseFloat(optionPrices[o]) > 0).map(o => [o, parseFloat(optionPrices[o])])),
+        shopId }
       const url = editing ? `/api/menu/${editing.id}` : '/api/menu'
       const res = await fetch(url, { method: editing ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
@@ -482,16 +491,23 @@ export function MenuClient({ menuItems: initial, shopId, showMenuOptions = true 
                 {form.options.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-2">
                     {form.options.map(opt => (
-                      <span key={opt} className="flex items-center gap-1 bg-brand-50 text-brand-700 border border-brand-200 text-xs font-semibold px-2.5 py-1 rounded-full">
-                        {opt}
-                        <button type="button" onClick={() => removeOption(opt)} className="ml-0.5 text-brand-400 hover:text-red-500">
+                      <div key={opt} className="flex items-center bg-brand-50 border border-brand-200 rounded-full overflow-hidden">
+                        <span className="text-brand-700 text-xs font-semibold pl-2.5 py-1.5 shrink-0">{opt}</span>
+                        <input
+                          type="number" min="0"
+                          value={optionPrices[opt] ?? ''}
+                          onChange={e => setOptionPrices(p => ({ ...p, [opt]: e.target.value }))}
+                          className="w-14 bg-transparent text-xs text-brand-600 font-bold text-center py-1.5 focus:outline-none placeholder:text-brand-300"
+                          placeholder="+฿0"
+                        />
+                        <button type="button" onClick={() => removeOption(opt)} className="px-2 py-1.5 text-brand-400 hover:text-red-500">
                           <X className="w-3 h-3" />
                         </button>
-                      </span>
+                      </div>
                     ))}
                   </div>
                 )}
-                <p className="text-[11px] text-gray-400 mt-1">ลูกค้าจะต้องเลือก 1 ตัวเลือกก่อนสั่ง</p>
+                <p className="text-[11px] text-gray-400 mt-1">ใส่ราคาเพิ่มในช่องตัวเลข เช่น ปั่น +5 บาท (ถ้าไม่มีราคาเพิ่มไม่ต้องใส่)</p>
               </div>
               )}
 

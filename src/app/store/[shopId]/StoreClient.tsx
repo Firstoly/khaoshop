@@ -622,7 +622,7 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
                 <div className="p-3 flex flex-col flex-1">
                   <p className="font-bold text-gray-900 text-sm leading-snug line-clamp-2 flex-1">{item.name}</p>
                   {item.description && (
-                    <p className="text-xs text-gray-400 mt-1 line-clamp-1">{item.description}</p>
+                    <p className="text-xs text-gray-400 mt-1 line-clamp-2">{item.description}</p>
                   )}
                   <div className="flex items-center justify-between mt-3">
                     <span className="font-display font-black text-brand-500 text-base">
@@ -699,11 +699,13 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
         const hasSizes = optionModal.sizes?.length > 0
         const hasToppings = optionModal.toppings?.length > 0
         const hasOptions = optionModal.options?.length > 0
-        const needsConfirm = hasSizes || hasToppings
+        const hasOptionPrices = hasOptions && Object.values((optionModal.optionPrices as Record<string, number>) ?? {}).some((p: number) => p > 0)
+        const needsConfirm = hasSizes || hasToppings || hasOptionPrices
 
         const basePrice = modalSize?.price ?? optionModal.price
         const toppingsTotal = modalToppings.reduce((s, t) => s + t.price, 0)
-        const totalPrice = basePrice + toppingsTotal
+        const optionExtraPrice = modalOption ? ((optionModal.optionPrices as Record<string, number>)?.[modalOption] ?? 0) : 0
+        const totalPrice = basePrice + toppingsTotal + optionExtraPrice
 
         function confirm() {
           if (hasSizes && !modalSize) { toast.error('กรุณาเลือกขนาดก่อน'); return }
@@ -723,14 +725,17 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
               onClick={e => e.stopPropagation()}>
 
               {/* Header */}
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1">
                   <h3 className="font-display text-lg font-bold text-gray-900">{optionModal.name}</h3>
-                  <p className="text-sm text-gray-400">
+                  {optionModal.description && (
+                    <p className="text-sm text-gray-500 mt-1 leading-relaxed">{optionModal.description}</p>
+                  )}
+                  <p className="text-xs text-gray-400 mt-1">
                     {[hasSizes && 'เลือกขนาด', hasToppings && 'ท็อปปิ้ง', hasOptions && !needsConfirm && 'เลือก 1 ตัวเลือก'].filter(Boolean).join(' · ')}
                   </p>
                 </div>
-                <button onClick={closeModal} className="w-8 h-8 bg-gray-100 rounded-xl flex items-center justify-center">
+                <button onClick={closeModal} className="w-8 h-8 bg-gray-100 rounded-xl flex items-center justify-center shrink-0 mt-0.5">
                   <X className="w-4 h-4 text-gray-600" />
                 </button>
               </div>
@@ -802,34 +807,38 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
                     ตัวเลือก {needsConfirm && <span className="text-gray-400 font-normal">(ไม่บังคับ)</span>}
                   </p>
                   <div className="grid grid-cols-2 gap-2">
-                    {optionModal.options.map((opt: string) => (
-                      <button key={opt} type="button"
-                        onClick={() => {
-                          if (needsConfirm) {
-                            setModalOption(prev => prev === opt ? '' : opt)
-                          } else {
-                            addToCartWithOption(optionModal, opt, optionModal.price)
-                            closeModal()
-                          }
-                        }}
-                        className={cn(
-                          'py-3 rounded-2xl border-2 font-bold text-sm transition-all active:scale-95',
-                          needsConfirm
-                            ? modalOption === opt
-                              ? 'border-brand-500 bg-brand-50 text-brand-700'
-                              : 'border-gray-200 bg-white text-gray-700 hover:border-brand-300'
-                            : 'border-brand-200 bg-brand-50 hover:border-brand-500 hover:bg-brand-100 text-brand-700'
-                        )}>
-                        {opt}
-                      </button>
-                    ))}
+                    {optionModal.options.map((opt: string) => {
+                      const optPrice = (optionModal.optionPrices as Record<string, number>)?.[opt] ?? 0
+                      return (
+                        <button key={opt} type="button"
+                          onClick={() => {
+                            if (needsConfirm) {
+                              setModalOption(prev => prev === opt ? '' : opt)
+                            } else {
+                              addToCartWithOption(optionModal, opt, optionModal.price + optPrice)
+                              closeModal()
+                            }
+                          }}
+                          className={cn(
+                            'py-3 px-3 rounded-2xl border-2 font-bold text-sm transition-all active:scale-95 flex flex-col items-center gap-0.5',
+                            needsConfirm
+                              ? modalOption === opt
+                                ? 'border-brand-500 bg-brand-50 text-brand-700'
+                                : 'border-gray-200 bg-white text-gray-700 hover:border-brand-300'
+                              : 'border-brand-200 bg-brand-50 hover:border-brand-500 hover:bg-brand-100 text-brand-700'
+                          )}>
+                          <span>{opt}</span>
+                          {optPrice > 0 && <span className="text-[11px] font-semibold opacity-70">+{formatPrice(optPrice)}</span>}
+                        </button>
+                      )
+                    })}
                   </div>
                   {!needsConfirm && <p className="text-center text-xs text-gray-400 mt-3">แตะตัวเลือกเพื่อเพิ่มลงตะกร้า</p>}
                 </div>
               )}
 
-              {/* Price breakdown (when toppings selected) */}
-              {needsConfirm && modalToppings.length > 0 && (
+              {/* Price breakdown */}
+              {needsConfirm && (modalToppings.length > 0 || optionExtraPrice > 0) && (
                 <div className="bg-gray-50 rounded-2xl p-4 space-y-1.5">
                   <div className="flex justify-between text-sm text-gray-500">
                     <span>ราคาฐาน{modalSize ? ` (${modalSize.name})` : ''}</span>
@@ -841,6 +850,12 @@ export function StoreClient({ shop, menuItems }: { shop: any; menuItems: any[] }
                       <span className="text-brand-500 font-semibold">+{formatPrice(t.price)}</span>
                     </div>
                   ))}
+                  {optionExtraPrice > 0 && modalOption && (
+                    <div className="flex justify-between text-sm text-gray-500">
+                      <span>{modalOption}</span>
+                      <span className="text-brand-500 font-semibold">+{formatPrice(optionExtraPrice)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between font-bold text-gray-900 pt-1.5 border-t border-gray-200">
                     <span>รวม</span>
                     <span className="text-brand-500">{formatPrice(totalPrice)}</span>

@@ -32,6 +32,7 @@ export async function POST(req: NextRequest) {
       options: body.options ?? [],
       sizes: body.sizes?.length ? body.sizes : undefined,
       toppings: body.toppings?.length ? body.toppings : undefined,
+      optionPrices: body.optionPrices && Object.keys(body.optionPrices).length ? body.optionPrices : undefined,
       shopId: body.shopId,
     },
   })

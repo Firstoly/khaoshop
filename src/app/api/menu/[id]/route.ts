@@ -21,6 +21,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       options: body.options ?? [],
       sizes: body.sizes?.length ? body.sizes : null,
       toppings: body.toppings?.length ? body.toppings : null,
+      optionPrices: body.optionPrices && Object.keys(body.optionPrices).length ? body.optionPrices : null,
     },
   })
   return NextResponse.json(item)

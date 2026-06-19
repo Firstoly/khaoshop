@@ -101,6 +101,7 @@ model MenuItem {
   options     String[]    @default([])
   sizes       Json?
   toppings    Json?
+  optionPrices Json?
   shopId      String
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
