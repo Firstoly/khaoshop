@@ -81,7 +81,7 @@ export function MenuClient({ menuItems: initial, shopId, showMenuOptions = true,
 
   function openAdd() {
     setEditing(null)
-    setForm({ name: '', description: '', price: '', dailyLimit: '20', category: 'แกงและต้ม', customCategory: '', imageUrl: '', isAvailable: true, options: [] })
+    setForm({ name: '', description: '', price: '', dailyLimit: '20', category: CATEGORIES[0], customCategory: '', imageUrl: '', isAvailable: true, options: [] })
     setSizes([])
     setToppings([])
     setOptionPrices({})
