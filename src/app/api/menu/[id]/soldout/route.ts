@@ -9,7 +9,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   const item = await prisma.menuItem.update({
     where: { id: params.id },
-    data: { soldCount: { set: 999 }, isAvailable: false },
+    data: { soldCount: { set: 999 } },
   })
   return NextResponse.json(item)
 }
