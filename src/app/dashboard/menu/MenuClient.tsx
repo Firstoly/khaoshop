@@ -44,7 +44,8 @@ interface MenuItem {
 }
 
 export function MenuClient({ menuItems: initial, shopId, showMenuOptions = true, shopType }: { menuItems: MenuItem[]; shopId: string; showMenuOptions?: boolean; shopType?: string | null }) {
-  const CATEGORIES = shopType?.includes('เครื่องดื่ม') ? CATEGORIES_DRINK : CATEGORIES_FOOD
+  const isDrinkShop = shopType?.includes('เครื่องดื่ม')
+  const CATEGORIES = isDrinkShop ? CATEGORIES_DRINK : CATEGORIES_FOOD
   const [menuItems, setMenuItems] = useState<MenuItem[]>(initial)
   const [search, setSearch] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('ทั้งหมด')
@@ -381,7 +382,7 @@ export function MenuClient({ menuItems: initial, shopId, showMenuOptions = true,
                 )}
               </div>
               {/* Sizes (แก้วเล็ก / แก้วกลาง / แก้วใหญ่ ฯลฯ) */}
-              <div>
+              {isDrinkShop && <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-sm font-semibold text-gray-700">
                     <Layers className="w-3.5 h-3.5 inline mr-1 text-gray-400" />
@@ -411,10 +412,10 @@ export function MenuClient({ menuItems: initial, shopId, showMenuOptions = true,
                 {sizes.length > 0 && (
                   <p className="text-[11px] text-gray-400">ราคาที่ลูกค้าจ่ายจะใช้ราคาตามขนาดที่เลือก ไม่ใช่ราคาหลัก</p>
                 )}
-              </div>
+              </div>}
 
               {/* Toppings (ไข่มุก / วุ้น / เยลลี่ ฯลฯ บวกราคา) */}
-              <div>
+              {isDrinkShop && <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-sm font-semibold text-gray-700">
                     <Tag className="w-3.5 h-3.5 inline mr-1 text-gray-400" />
@@ -444,10 +445,10 @@ export function MenuClient({ menuItems: initial, shopId, showMenuOptions = true,
                 {toppings.length > 0 && (
                   <p className="text-[11px] text-gray-400">ราคาท็อปปิ้งจะบวกเพิ่มจากราคาหลัก/ขนาด</p>
                 )}
-              </div>
+              </div>}
 
               {/* Options (ปั่น / ไม่ปั่น / เย็น / ร้อน ฯลฯ) */}
-              {showMenuOptions && (
+              {isDrinkShop && showMenuOptions && (
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                   <Tag className="w-3.5 h-3.5 inline mr-1 text-gray-400" />

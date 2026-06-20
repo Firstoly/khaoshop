@@ -2,12 +2,13 @@ import { prisma } from '@/lib/prisma'
 import { ShieldCheck, UtensilsCrossed, ClipboardList, ListChecks, AlertCircle, BarChart2, Settings, Tag } from 'lucide-react'
 import { PermissionToggle } from './PermissionToggle'
 import { PresetButton } from './PresetButton'
+import { ShopTypeSelect } from './ShopTypeSelect'
 
 const PERM_DEFS = [
   { key: 'canMenu',         label: 'จัดการเมนู',          icon: UtensilsCrossed, color: 'text-orange-500' },
   { key: 'canOrders',       label: 'จัดการออเดอร์',        icon: ClipboardList,   color: 'text-blue-500'   },
   { key: 'canKitchen',      label: 'เตรียมอาหาร',          icon: ListChecks,      color: 'text-purple-500' },
-  { key: 'showMenuOptions', label: 'ตัวเลือกเมนู (ปั่น/ไม่ปั่น)', icon: Tag,      color: 'text-amber-500'  },
+  { key: 'showMenuOptions', label: 'ตัวเลือกเครื่องดื่ม', icon: Tag,      color: 'text-amber-500'  },
   { key: 'canDebt',         label: 'ลูกหนี้ค้างชำระ',     icon: AlertCircle,     color: 'text-red-500'    },
   { key: 'canAnalytics',    label: 'รายงานยอดขาย',        icon: BarChart2,       color: 'text-emerald-500'},
   { key: 'canSettings',     label: 'ตั้งค่าร้าน',         icon: Settings,        color: 'text-gray-500'   },
@@ -82,10 +83,10 @@ export default async function PermissionsPage() {
                   <td className="px-6 py-4">
                     <p className="font-semibold text-gray-900">{user.shop?.name}</p>
                     <p className="text-xs text-gray-400">{user.name} · {user.email}</p>
-                    {user.shop?.shopType && (
-                      <span className="inline-block mt-1 text-[10px] font-bold bg-violet-50 text-violet-600 border border-violet-100 px-2 py-0.5 rounded-full">
-                        {user.shop.shopType}
-                      </span>
+                    {user.shop && (
+                      <div className="mt-1">
+                        <ShopTypeSelect userId={user.id} currentType={user.shop.shopType} />
+                      </div>
                     )}
                   </td>
                   <td className="px-4 py-4 text-center">
