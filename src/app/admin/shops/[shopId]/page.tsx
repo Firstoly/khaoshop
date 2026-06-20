@@ -16,7 +16,8 @@ async function getShop(shopId: string) {
         select: {
           id: true, name: true, description: true, price: true,
           imageUrl: true, dailyLimit: true, soldCount: true,
-          isAvailable: true, category: true,
+          isAvailable: true, category: true, options: true,
+          sizes: true, toppings: true, optionPrices: true,
         },
         orderBy: { createdAt: 'desc' },
       },
@@ -98,6 +99,7 @@ export default async function AdminShopDetailPage({ params }: { params: { shopId
         orders={shop.orders}
         menuItems={shop.menuItems}
         shopId={shop.id}
+        shopType={shop.shopType}
       />
     </div>
   )

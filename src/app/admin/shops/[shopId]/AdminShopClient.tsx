@@ -11,10 +11,11 @@ const TABS = [
   { key: 'menu',   label: 'จัดการเมนู',   icon: UtensilsCrossed },
 ]
 
-export function AdminShopClient({ orders, menuItems, shopId }: {
+export function AdminShopClient({ orders, menuItems, shopId, shopType }: {
   orders: any[]
   menuItems: any[]
   shopId: string
+  shopType?: string | null
 }) {
   const [tab, setTab] = useState('orders')
 
@@ -41,7 +42,7 @@ export function AdminShopClient({ orders, menuItems, shopId }: {
 
       {/* Content */}
       {tab === 'orders' && <AdminOrdersClient orders={orders} />}
-      {tab === 'menu'   && <MenuClient menuItems={menuItems} shopId={shopId} />}
+      {tab === 'menu'   && <MenuClient menuItems={menuItems} shopId={shopId} shopType={shopType} showMenuOptions={true} />}
     </div>
   )
 }
