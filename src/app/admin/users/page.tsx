@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { Users, ShieldCheck, Store, User } from 'lucide-react'
 import { RoleToggle } from './RoleToggle'
 import { CreateUserModal } from './CreateUserModal'
+import { SuspendButton } from './SuspendButton'
 
 async function getUsers() {
   return prisma.user.findMany({
@@ -87,7 +88,12 @@ export default async function UsersPage() {
                     {new Date(user.createdAt).toLocaleDateString('th-TH')}
                   </td>
                   <td className="px-6 py-4 text-center">
-                    <RoleToggle userId={user.id} currentRole={(user as any).role ?? 'USER'} userName={user.name} />
+                    <div className="flex items-center justify-center gap-2">
+                      <RoleToggle userId={user.id} currentRole={(user as any).role ?? 'USER'} userName={user.name} />
+                      {(user as any).role !== 'SUPER_ADMIN' && (
+                        <SuspendButton userId={user.id} isSuspended={(user as any).isSuspended ?? false} userName={user.name} />
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

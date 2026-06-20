@@ -28,6 +28,10 @@ export const authOptions: NextAuthOptions = {
           throw new Error('ไม่พบบัญชีนี้ในระบบ')
         }
 
+        if (user.isSuspended) {
+          throw new Error('บัญชีนี้ถูกระงับการใช้งาน กรุณาติดต่อผู้ดูแลระบบ')
+        }
+
         const isValid = await bcrypt.compare(credentials.password, user.password)
         if (!isValid) {
           throw new Error('รหัสผ่านไม่ถูกต้อง')
