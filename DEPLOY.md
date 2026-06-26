@@ -1,12 +1,57 @@
 # 🚀 วิธี Deploy KhaoShop (ฟรี 100%)
 
-## บริการที่ใช้
-| บริการ | ใช้ทำอะไร | ราคา |
-|--------|-----------|------|
-| **Vercel** | Host Next.js App | ฟรี |
-| **Neon** | PostgreSQL Database | ฟรี |
-| **Cloudinary** | เก็บรูปภาพ | ฟรี 25GB |
-| **GitHub** | เก็บ Code | ฟรี |
+## บริการที่ใช้และเหตุผลที่เลือก
+
+### Vercel — Host Next.js App (ฟรี)
+ใช้รัน Next.js โดยเฉพาะ เพราะ Next.js ถูกสร้างโดยทีมเดียวกับ Vercel ทำให้ทำงานร่วมกันได้ดีที่สุด
+- Deploy อัตโนมัติทุกครั้งที่ push code ขึ้น GitHub ไม่ต้องทำเอง
+- รองรับ Serverless Functions (API routes ของ Next.js) ได้ทันที ไม่ต้องตั้งค่าเพิ่ม
+- มี CDN กระจาย server ทั่วโลก ทำให้เว็บโหลดเร็วขึ้น
+- ทางเลือกอื่น เช่น Railway หรือ Render ก็ได้ แต่ Vercel ง่ายสุดสำหรับ Next.js
+
+### Neon — PostgreSQL Database (ฟรี)
+ใช้เก็บข้อมูลทั้งหมด เช่น user, เมนู, ออเดอร์
+- เป็น Serverless PostgreSQL หมายความว่าไม่ต้องดูแล server database เอง Neon จัดการให้
+- เชื่อมต่อกับ Prisma (ORM ที่โปรเจกต์ใช้) ได้ง่ายมาก
+- ฟรีแพลนให้ storage 512MB และ branch database (คล้าย git branch แต่เป็น database)
+- ทางเลือกอื่น เช่น Supabase หรือ PlanetScale ก็ได้ แต่ Neon เชื่อมกับ Prisma ได้ดีกว่า
+
+### Cloudinary — เก็บรูปภาพ (ฟรี 25GB)
+ใช้เก็บรูปเมนูอาหาร โลโก้ร้าน และสลิปการจ่ายเงิน
+- ถ้าเก็บรูปใน server ตรงๆ จะหมดพื้นที่เร็วมาก และ Vercel ไม่รองรับการเก็บไฟล์ถาวร
+- Cloudinary จัดการ resize, compress, และแปลงรูปให้อัตโนมัติ ไม่ต้องเขียนโค้ดเพิ่ม
+- ได้ URL ของรูปกลับมา เก็บแค่ URL ใน database แทนตัวไฟล์จริง
+- ทางเลือกอื่น เช่น AWS S3 หรือ Supabase Storage ก็ได้ แต่ Cloudinary ง่ายสุด
+
+### Pusher — Real-time Notification (ฟรี 200k messages/วัน)
+ใช้ส่งแจ้งเตือนออเดอร์ใหม่ให้เจ้าของร้านแบบทันที ไม่ต้อง refresh หน้า
+- WebSocket ปกติต้องการ server ที่รัน 24/7 แต่ Vercel เป็น serverless ทำไม่ได้
+- Pusher เป็น managed WebSocket service รับส่ง event แทน ไม่ต้องดูแล server เอง
+- เจ้าของร้านเปิดหน้า orders ทิ้งไว้ พอมีออเดอร์ใหม่จะได้ยินเสียงและเห็น notification ทันที
+- ทางเลือกอื่น เช่น Ably หรือ Socket.io (บน Railway) ก็ได้
+
+### Resend — ส่งอีเมล Reset Password (ฟรี 3,000 อีเมล/เดือน)
+ใช้ส่งลิงก์รีเซ็ตรหัสผ่านให้ user ทาง email
+- Gmail SMTP ปกติถูกบล็อกโดย Google ถ้าส่งจาก server
+- Resend เป็น email API ที่เชื่อถือได้และตั้งค่าง่ายมาก แค่ใส่ API key เดียว
+- ฟรีแพลน 3,000 อีเมล/เดือน เพียงพอสำหรับร้านทั่วไป
+- ทางเลือกอื่น เช่น SendGrid หรือ Mailgun ก็ได้
+
+### GitHub — เก็บ Code (ฟรี)
+ใช้เก็บ source code และเชื่อมกับ Vercel สำหรับ auto-deploy
+- ทุกครั้งที่ push code ขึ้น GitHub → Vercel จะ deploy ให้อัตโนมัติ
+- เก็บ history ทุก version ของโค้ด ย้อนกลับได้ถ้าทำพัง
+
+---
+
+| บริการ | หน้าที่ | ฟรีแพลน |
+|--------|---------|---------|
+| **Vercel** | Host เว็บ + รัน API | ไม่จำกัด |
+| **Neon** | PostgreSQL Database | 512MB |
+| **Cloudinary** | เก็บรูปภาพ | 25GB |
+| **Pusher** | Real-time notification | 200k msg/วัน |
+| **Resend** | ส่งอีเมล | 3,000/เดือน |
+| **GitHub** | เก็บ Code + Auto-deploy | ไม่จำกัด |
 
 ---
 
@@ -38,11 +83,10 @@ git push -u origin main
 1. ไปที่ https://cloudinary.com → Sign up ฟรี
 2. หลัง login ไปที่ **Dashboard**
 3. Copy ข้อมูล 3 อย่าง:
-   - **Cloud Name**de1tbzwnw
-   - **API Key**524942331727186
-   - **API Secret**kwOIsflwz2Ddj4fhYIZqKGjpdm8
+   - **Cloud Name** (เช่น `abc123xyz`)
+   - **API Key** (เช่น `123456789012345`)
+   - **API Secret** (เช่น `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`)
 4. เก็บไว้ใช้ใน STEP 4
-postgresql://neondb_owner:npg_Ct1FprOBWvn3@ep-sweet-term-aowljexh-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
 
 ---
 
