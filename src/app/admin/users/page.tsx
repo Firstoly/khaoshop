@@ -3,6 +3,8 @@ import { Users, ShieldCheck, Store, User } from 'lucide-react'
 import { RoleToggle } from './RoleToggle'
 import { CreateUserModal } from './CreateUserModal'
 import { SuspendButton } from './SuspendButton'
+import { ResetPasswordModal } from './ResetPasswordModal'
+import { DeleteUserButton } from './DeleteUserButton'
 
 async function getUsers() {
   return prisma.user.findMany({
@@ -122,6 +124,8 @@ export default async function UsersPage() {
                     <div className="flex items-center justify-center gap-2">
                       <RoleToggle userId={user.id} currentRole={(user as any).role ?? 'USER'} userName={user.name} />
                       <SuspendButton userId={user.id} isSuspended={(user as any).isSuspended ?? false} userName={user.name} />
+                      <ResetPasswordModal userId={user.id} userName={user.name} />
+                      <DeleteUserButton userId={user.id} userName={user.name} />
                     </div>
                   </td>
                 </tr>
