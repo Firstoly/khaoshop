@@ -33,7 +33,7 @@ export default async function UsersPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
           { label: 'Super Admin', value: adminUsers.length,   icon: ShieldCheck, bg: 'bg-violet-50', text: 'text-violet-600' },
           { label: 'เจ้าของร้าน', value: shopUsers.length,   icon: Store,       bg: 'bg-orange-50', text: 'text-orange-500' },
@@ -50,33 +50,35 @@ export default async function UsersPage() {
       </div>
 
       {/* Admin section */}
-      <div className="card-base overflow-hidden animate-fade-in">
-        <div className="px-6 py-4 border-b border-violet-100 flex items-center gap-2 bg-violet-50">
+      <div className="card-base animate-fade-in">
+        <div className="px-6 py-4 border-b border-violet-100 flex items-center gap-2 bg-violet-50 rounded-t-2xl">
           <ShieldCheck className="w-5 h-5 text-violet-500" />
           <h2 className="font-display font-bold text-violet-700">ผู้ดูแลระบบ (Super Admin)</h2>
           <span className="ml-auto text-xs text-violet-400 bg-violet-100 px-2 py-1 rounded-full">{adminUsers.length} บัญชี</span>
         </div>
-        <table className="w-full text-sm">
-          <tbody className="divide-y divide-gray-50">
-            {adminUsers.map(user => (
-              <tr key={user.id} className="hover:bg-violet-50/40 transition-colors">
-                <td className="px-6 py-4">
-                  <p className="font-semibold text-gray-900">{user.name}</p>
-                  <p className="text-xs text-gray-400">{user.email}</p>
-                </td>
-                <td className="px-6 py-4 text-xs text-gray-400">
-                  สมัครเมื่อ {new Date(user.createdAt).toLocaleDateString('th-TH')}
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <RoleToggle userId={user.id} currentRole="SUPER_ADMIN" userName={user.name} />
-                </td>
-              </tr>
-            ))}
-            {adminUsers.length === 0 && (
-              <tr><td colSpan={3} className="px-6 py-8 text-center text-gray-400 text-sm">ไม่มีผู้ดูแลระบบ</td></tr>
-            )}
-          </tbody>
-        </table>
+        <div className="overflow-x-auto rounded-b-2xl">
+          <table className="w-full text-sm">
+            <tbody className="divide-y divide-gray-50">
+              {adminUsers.map(user => (
+                <tr key={user.id} className="hover:bg-violet-50/40 transition-colors">
+                  <td className="px-6 py-4">
+                    <p className="font-semibold text-gray-900">{user.name}</p>
+                    <p className="text-xs text-gray-400">{user.email}</p>
+                  </td>
+                  <td className="px-6 py-4 text-xs text-gray-400">
+                    สมัครเมื่อ {new Date(user.createdAt).toLocaleDateString('th-TH')}
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <RoleToggle userId={user.id} currentRole="SUPER_ADMIN" userName={user.name} />
+                  </td>
+                </tr>
+              ))}
+              {adminUsers.length === 0 && (
+                <tr><td colSpan={3} className="px-6 py-8 text-center text-gray-400 text-sm">ไม่มีผู้ดูแลระบบ</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Shop owners section */}

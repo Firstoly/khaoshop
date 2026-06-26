@@ -64,14 +64,14 @@ export default async function AdminPage() {
       </div>
 
       {/* Today banner */}
-      <div className="bg-gradient-to-r from-violet-500 to-violet-600 text-white rounded-2xl p-5 flex items-center justify-between shadow-admin animate-bounce-in">
+      <div className="bg-gradient-to-r from-violet-500 to-violet-600 text-white rounded-2xl p-5 flex items-center justify-between gap-4 shadow-admin animate-bounce-in">
         <div>
           <p className="text-violet-200 text-sm">ยอดรวมวันนี้ทุกร้าน</p>
-          <p className="font-display text-3xl font-bold mt-1">{formatPrice(todayRevAll)}</p>
+          <p className="font-display text-2xl sm:text-3xl font-bold mt-1">{formatPrice(todayRevAll)}</p>
         </div>
-        <div className="text-right">
+        <div className="text-right shrink-0">
           <p className="text-violet-200 text-sm">ร้านเปิดอยู่</p>
-          <p className="font-display text-3xl font-bold mt-1">{openShops} / {shops.length}</p>
+          <p className="font-display text-2xl sm:text-3xl font-bold mt-1">{openShops} / {shops.length}</p>
         </div>
       </div>
 

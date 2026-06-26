@@ -39,7 +39,7 @@ export default async function ShopsPage() {
       </div>
 
       {/* Stats bar */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
           { label: 'ร้านทั้งหมด',  value: shops.length, icon: Store,         bg: 'bg-orange-50',  text: 'text-orange-500'  },
           { label: 'กำลังเปิด',    value: openCount,    icon: TrendingUp,    bg: 'bg-emerald-50', text: 'text-emerald-600' },
@@ -69,7 +69,7 @@ export default async function ShopsPage() {
           return (
             <div key={shop.id} className="card-base overflow-hidden animate-fade-in hover:shadow-card-hover transition-shadow duration-200">
               {/* Shop header */}
-              <div className="px-6 py-4 flex items-center justify-between border-b border-gray-50">
+              <div className="px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-gray-50">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center shrink-0">
                     <Store className="w-5 h-5 text-orange-500" />
@@ -87,7 +87,7 @@ export default async function ShopsPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-5 text-right">
+                <div className="flex items-center gap-3 flex-wrap">
                   <div>
                     <p className="text-xs text-gray-400">ยอดวันนี้</p>
                     <p className="font-display font-bold text-emerald-600">{formatPrice(todayRev)}</p>
