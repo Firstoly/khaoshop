@@ -1,3 +1,9 @@
+// ===================================================
+// POST /api/admin/reset-password — Admin รีเซ็ตรหัสผ่าน user
+// เรียกจาก ResetPasswordModal ในหน้า admin/users
+// Admin กรอก password ใหม่โดยตรง ไม่ต้องส่งอีเมล
+// ===================================================
+
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
@@ -15,6 +21,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'ข้อมูลไม่ถูกต้อง' }, { status: 400 })
   }
 
+  // hash password ก่อนบันทึก cost=10 สมดุลระหว่างความปลอดภัยและความเร็ว
   const hashed = await bcrypt.hash(password, 10)
   await prisma.user.update({ where: { id: userId }, data: { password: hashed } })
 

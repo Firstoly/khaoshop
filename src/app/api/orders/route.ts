@@ -1,3 +1,8 @@
+// ===================================================
+// POST /api/orders — สร้างออเดอร์ใหม่
+// เรียกจากหน้าร้านลูกค้าตอนกด "ยืนยันสั่งซื้อ"
+// ===================================================
+
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { pusherServer, PUSHER_EVENTS, getShopChannel } from '@/lib/pusher'
@@ -7,15 +12,20 @@ export async function POST(req: NextRequest) {
   const body = await req.json()
   const { shopId, customerName, customerPhone, customerAddress, note, items, paymentMethod } = body
 
+  // ตรวจสอบข้อมูลที่จำเป็น
   if (!shopId || !customerName || !customerPhone || !items?.length) {
     return NextResponse.json({ error: 'ข้อมูลไม่ครบถ้วน' }, { status: 400 })
   }
 
+  // เช็คว่าร้านเปิดอยู่
   const shop = await prisma.shop.findUnique({ where: { id: shopId } })
   if (!shop?.isOpen) return NextResponse.json({ error: 'ร้านปิดชั่วคราว' }, { status: 400 })
 
   try {
+    // ใช้ Transaction ทำให้ทุก step สำเร็จหรือล้มเหลวพร้อมกัน
     const order = await prisma.$transaction(async (tx) => {
+
+      // ตรวจสอบสต็อกของทุกเมนูที่สั่ง
       for (const item of items) {
         const menuItem = await tx.menuItem.findUnique({ where: { id: item.menuItemId } })
         if (!menuItem?.isAvailable) throw new Error(`เมนู "${menuItem?.name}" ไม่พร้อมจำหน่าย`)
@@ -23,10 +33,12 @@ export async function POST(req: NextRequest) {
         if (remaining < item.quantity) throw new Error(`"${menuItem.name}" เหลือเพียง ${remaining} ที่`)
       }
 
+      // นับออเดอร์วันนี้เพื่อสร้างเลขคิว (นับใหม่ทุกวัน)
       const todayStart = new Date(); todayStart.setHours(0,0,0,0)
       const todayCount = await tx.order.count({ where: { shopId, createdAt: { gte: todayStart } } })
       const totalAmount = items.reduce((s: number, i: any) => s + i.price * i.quantity, 0)
 
+      // สร้าง Order และ OrderItem พร้อมกัน
       const newOrder = await tx.order.create({
         data: {
           queueNumber: todayCount + 1,
@@ -50,6 +62,7 @@ export async function POST(req: NextRequest) {
         include: { items: { include: { menuItem: true } } },
       })
 
+      // เพิ่ม soldCount ของแต่ละเมนูที่สั่ง
       for (const item of items) {
         await tx.menuItem.update({
           where: { id: item.menuItemId },
@@ -60,7 +73,7 @@ export async function POST(req: NextRequest) {
       return newOrder
     })
 
-    // 🔔 Trigger Pusher notification
+    // แจ้งเตือน real-time ผ่าน Pusher ให้เจ้าของร้านเห็นออเดอร์ใหม่ทันที
     try {
       await pusherServer.trigger(
         getShopChannel(shopId),
@@ -83,7 +96,7 @@ export async function POST(req: NextRequest) {
       console.error('Pusher error:', pusherErr)
     }
 
-    // 🔔 Web Push notification
+    // ส่ง Web Push notification ถ้าเจ้าของร้านเปิดใช้การแจ้งเตือน
     try {
       const shop = await prisma.shop.findUnique({ where: { id: shopId }, select: { userId: true, name: true } })
       if (shop) {

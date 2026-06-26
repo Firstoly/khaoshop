@@ -1,3 +1,9 @@
+// ===================================================
+// PermissionToggle — Toggle switch เปิด/ปิดสิทธิ์แต่ละหัวข้อ
+// ใช้ Optimistic UI: อัปเดต UI ก่อน แล้วค่อย fetch API
+// ถ้า fetch ล้มเหลว ให้ revert กลับค่าเดิม
+// ===================================================
+
 'use client'
 
 import { useState } from 'react'
@@ -17,6 +23,7 @@ export function PermissionToggle({ userId, permKey, value, label }: {
   async function toggle() {
     setLoading(true)
     const next = !enabled
+    // Optimistic update: เปลี่ยน UI ทันทีโดยไม่รอ server
     setEnabled(next)
     try {
       const res = await fetch('/api/admin/set-permission', {
@@ -26,8 +33,10 @@ export function PermissionToggle({ userId, permKey, value, label }: {
       })
       if (!res.ok) throw new Error()
       toast.success(`${label}: ${next ? 'เปิด' : 'ปิด'}แล้ว`)
+      // refresh เพื่อให้ server component โหลดข้อมูลใหม่
       router.refresh()
     } catch {
+      // ถ้าเกิด error ให้ revert UI กลับ
       setEnabled(!next)
       toast.error('เกิดข้อผิดพลาด')
     } finally {
@@ -36,6 +45,7 @@ export function PermissionToggle({ userId, permKey, value, label }: {
   }
 
   return (
+    // Toggle switch — เลื่อนขวา = เปิด (violet), เลื่อนซ้าย = ปิด (gray)
     <button
       onClick={toggle}
       disabled={loading}
